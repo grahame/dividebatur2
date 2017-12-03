@@ -5,7 +5,7 @@ mod aec;
 
 fn main() {
     println!("Hello, world!");
-    let candidates = match aec::data::candidates::load_aec_candidates("aec_data/fed2016/common/2016federalelection-all-candidates-nat-30-06-924.csv".to_owned()) {
+    let candidates = match aec::data::candidates::load_aec_candidates("aec_data/fed2016/common/aec-senate-candidateinformation-20499.csv", "NSW") {
         Ok(rows) => rows,
         Err(error) => {
             panic!("Couldn't read candidates file: {:?}", error);
