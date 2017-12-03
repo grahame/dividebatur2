@@ -54,9 +54,9 @@ pub fn load_aec_candidates(filename: &str, state: &str) -> Result<Vec<AECAllCand
         }
         rows.push(record);
     }
+    // a little subtle: we need to sort in ballot paper order, which means ticket ordering:
+    //   A, B, C, ... Z, AA, AB, .. AZ, etc
+    // (rather than a standard lexical sort)
     rows.sort_by(|a, b| (a.ticket.len(), &a.ticket, &a.ballot_position).cmp(&(b.ticket.len(), &b.ticket, &b.ballot_position)));
-    for record in rows.iter() {
-        println!("{:?}", record);
-    }
     Ok((rows))
 }
