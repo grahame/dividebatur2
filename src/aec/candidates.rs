@@ -11,7 +11,7 @@ pub struct AECAllCandidateRow {
     state_ab: String,
     div_nm: String,
     ticket: String,
-    ballot_position: String,
+    ballot_position: u32,
     surname: String,
     ballot_given_nm: String,
     party_ballot_nm: String,
@@ -39,6 +39,7 @@ pub fn load_aec_candidates(filename: String) -> Result<Vec<AECAllCandidateRow>, 
     let mut rows: Vec<AECAllCandidateRow> = Vec::new();
     for result in rdr.deserialize() {
         let record: AECAllCandidateRow = result?;
+        println!("{:?}", record);
         rows.push(record);
     }
     Ok((rows))
