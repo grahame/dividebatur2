@@ -1,1 +1,1 @@
-pub mod candidates;
+pub mod data;
