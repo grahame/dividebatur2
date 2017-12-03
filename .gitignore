@@ -1,2 +1,4 @@
 /target/
 **/*.rs.bk
+aec_data/
+.vscode/
