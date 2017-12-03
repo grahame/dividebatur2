@@ -1,0 +1,6 @@
+[package]
+name = "dividebatur"
+version = "0.1.0"
+authors = ["Grahame Bowland <grahame@angrygoats.net>"]
+
+[dependencies]
