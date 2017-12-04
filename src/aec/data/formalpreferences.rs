@@ -10,35 +10,33 @@ use std::fs::File;
 
 #[derive(Debug,Deserialize)]
 pub struct AECFormalPreferencesRow {
-    #[serde(rename = "ElectorateNm")]
-    electorate_nm: String,
-    #[serde(rename = "VoteCollectionPointNm")]
-    vote_collection_point_nm: String,
-    #[serde(rename = "VoteCollectionPointId")]
-    vote_collection_point_id: i32,
-    #[serde(rename = "BatchNo")]
-    batch_no: i32,
-    #[serde(rename = "PaperNo")]
-    paper_no: i32,
+    // These are in the CSV file, but we don't use them, so no point reading them:
+    //   #[serde(rename = "ElectorateNm")]
+    //   electorate_nm: String,
+    //   #[serde(rename = "VoteCollectionPointNm")]
+    //   vote_collection_point_nm: String,
+    //   #[serde(rename = "VoteCollectionPointId")]
+    //   vote_collection_point_id: i32,
+    //   #[serde(rename = "BatchNo")]
+    //   batch_no: i32,
+    //   #[serde(rename = "PaperNo")]
+    //   paper_no: i32,
     #[serde(rename = "Preferences")]
     preferences: String,
 }
 
-pub fn load(filename: &str) -> Result<Vec<AECFormalPreferencesRow>, Box<Error>> {
+pub fn load(filename: &str) -> Result<Vec<Vec<u8>>, Box<Error>> {
     let f = File::open(filename)?;
     let mut rdr = csv::Reader::from_reader(f);
-    let mut rows: Vec<AECFormalPreferencesRow> = Vec::new();
+    let mut rows: Vec<Vec<u8>> = Vec::new();
     for (idx, result) in rdr.deserialize().enumerate() {
         // the first row is always garbage (heading '----' markers)
-        let record: AECFormalPreferencesRow = match result {
-            Ok(v) => v,
-            Err(e) => if idx == 0 {
-                continue
-            } else {
-                return Err(Box::new(e));
-            }
-        };
-        rows.push(record);
+        if idx == 0 {
+            continue;
+        }
+        let record: AECFormalPreferencesRow = result?;
+        let prefs: Vec<u8> = record.preferences.split(",").map(::parse_preference_value).collect();
+        // rows.push(prefs);
     }
     Ok((rows))
 }
