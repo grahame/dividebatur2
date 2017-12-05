@@ -112,13 +112,9 @@ pub fn load(filename: &str, candidates: &::CandidateData) -> Result<Vec<Vec<::Ca
         if form_buf.len() > 0 {
             forms.push(form_buf.clone());
             continue;
-        } else {
-            println!("nothing formal");
-            println!("{:?}", record.preferences);
-            println!("{:?}", atl_buf);
-            println!("{:?}", btl_buf);
-            println!();
         }
+
+        unreachable!();
     }
     Ok(forms)
 }

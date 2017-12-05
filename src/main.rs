@@ -36,6 +36,9 @@ fn load_groups(candidates: Vec<aec::data::candidates::AECAllCandidateRow>) -> Ca
     let mut ticket_candidates: HashMap<String, Vec<CandidateIndex>> = HashMap::new();
 
     for (idx, candidate) in candidates.iter().enumerate() {
+        if candidate.ticket == "UG" {
+            continue;
+        }
         ticket_candidates.entry(candidate.ticket.clone()).or_insert_with(|| {
             tickets.push(candidate.ticket.clone());
             Vec::new()
