@@ -6,7 +6,7 @@ use std::collections::HashMap;
 
 // represents a candidate's index on the ballot paper
 // ranges from 0..N-1 where N is the number of candidates
-#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Copy)]
+#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Copy, Hash)]
 pub struct CandidateIndex(u8);
 
 // represents a group's index on the ballot paper
@@ -67,7 +67,7 @@ fn senate2015() {
         }
     };
 
-    println!("{} formal preferences read.", prefs.len());
+    println!("{} unique preferences read.", prefs.len());
 }
 
 fn main() {

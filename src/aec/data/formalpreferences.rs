@@ -7,6 +7,7 @@ extern crate csv;
 
 use std::error::Error;
 use std::fs::File;
+use std::collections::HashMap;
 use rayon::prelude::*;
 
 #[derive(Debug,Deserialize)]
@@ -87,21 +88,23 @@ fn parse_preferences(raw_preferences: &String, candidates: &::CandidateData) -> 
     return form_buf;
 }
 
-pub fn load(filename: &str, candidates: &::CandidateData) -> Result<Vec<Vec<::CandidateIndex>>, Box<Error>> {
+pub fn load(filename: &str, candidates: &::CandidateData) -> Result<Vec<(usize, Vec<::CandidateIndex>)>, Box<Error>> {
     let f = File::open(filename)?;
     let mut rdr = csv::Reader::from_reader(f);
     let hunk_size = 1024;
 
-    let mut raw_preferences = Vec::new();
     let mut work_buf = Vec::new();
-    let mut forms: Vec<Vec<::CandidateIndex>> = Vec::new();
 
-    let process = |w: &mut Vec<String>, r: &mut Vec<Vec<::CandidateIndex>>| {
-        let mut partial: Vec<Vec<::CandidateIndex>> = w.par_iter().map(|p| parse_preferences(p, candidates)).collect();
-        r.append(&mut partial);
+    let process = |w: &mut Vec<String>, r: &mut HashMap<Vec<::CandidateIndex>, usize>| {
+        let partial: Vec<Vec<::CandidateIndex>> = w.par_iter().map(|p| parse_preferences(p, candidates)).collect();
+        for form in partial.iter() {
+            let counter = r.entry(form.clone()).or_insert(0);
+            *counter += 1;
+        }
         w.clear();
     };
 
+    let mut keys: HashMap<Vec<::CandidateIndex>, usize> = HashMap::new();
     for (idx, result) in rdr.deserialize().enumerate() {
         if idx == 0 {
             continue;
@@ -110,19 +113,10 @@ pub fn load(filename: &str, candidates: &::CandidateData) -> Result<Vec<Vec<::Ca
         work_buf.push(record.preferences);
 
         if work_buf.len() >= hunk_size {
-            process(&mut work_buf, &mut forms);
+            process(&mut work_buf, &mut keys);
         }
     }
-    process(&mut work_buf, &mut forms);
+    process(&mut work_buf, &mut keys);
 
-    for (idx, result) in rdr.deserialize().enumerate() {
-        // the first row is always garbage (heading '----' markers)
-        if idx == 0 {
-            continue;
-        }
-        let record: AECFormalPreferencesRow = result?;
-        raw_preferences.push(record.preferences);
-    }
-
-    Ok(forms)
+    Ok(keys.par_iter().map(|(k, v)| (v.clone(), k.clone())).collect())
 }
