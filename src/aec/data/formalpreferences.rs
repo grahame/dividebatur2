@@ -25,14 +25,18 @@ pub struct AECFormalPreferencesRow {
     preferences: String,
 }
 
-pub fn load(filename: &str, candidates: &::CandidateData) -> Result<Vec<Vec<u8>>, Box<Error>> {
+pub fn load(filename: &str, candidates: &::CandidateData) -> Result<Vec<Vec<::CandidateIndex>>, Box<Error>> {
     let f = File::open(filename)?;
     let mut rdr = csv::Reader::from_reader(f);
-    let mut rows: Vec<Vec<u8>> = Vec::new();
 
-    let n = 200;
-    let tickets = candidates.ticket_candidates.len();
-    // let mut pref_buf: Vec<u8> = Vec::with_capacity(tickets + (candidates.count as usize));
+    let ticket_count = candidates.ticket_candidates.len();
+    let mut atl_buf: Vec<(::PreferenceForGroup, ::GroupIndex)> = Vec::with_capacity(ticket_count);
+    let mut btl_buf: Vec<(::PreferenceForCandidate, ::CandidateIndex)> = Vec::with_capacity(candidates.count);
+    let mut form_buf: Vec<::CandidateIndex> = Vec::with_capacity(candidates.count);
+
+    println!("reading formal preferences, {} candidates, {} groups", candidates.count, ticket_count);
+
+    let mut forms: Vec<Vec<::CandidateIndex>> = Vec::new();
 
     for (idx, result) in rdr.deserialize().enumerate() {
         // the first row is always garbage (heading '----' markers)
@@ -41,15 +45,53 @@ pub fn load(filename: &str, candidates: &::CandidateData) -> Result<Vec<Vec<u8>>
         }
         let record: AECFormalPreferencesRow = result?;
 
+        atl_buf.clear();
+        btl_buf.clear();
+
         for (pref_idx, pref_str) in record.preferences.split(",").enumerate() {
-            let pref_v: u8 = if pref_str == "" {
+            let pref_v: u32 = if pref_str == "" {
                 continue
             } else if pref_str == "*" || pref_str == "/" {
                 1
             } else {
-                pref_str.parse::<u8>().unwrap()
+                pref_str.parse::<u32>().unwrap()
             };
+
+            if pref_idx < ticket_count {
+                atl_buf.push((::PreferenceForGroup(pref_v as u8), ::GroupIndex(pref_idx as u8)));
+            } else {
+                btl_buf.push((::PreferenceForCandidate(pref_v as u8), ::CandidateIndex(pref_idx as u8)));
+            }
         }
+
+        atl_buf.sort();
+        btl_buf.sort();
+
+        form_buf.clear();
+        let mut last_valid = ::PreferenceForCandidate(0);
+        for idx in 0..btl_buf.len() {
+            let (pref, candidate_id) = btl_buf[idx];
+            // the preference at this index must be the index plus 1
+            if pref != ::PreferenceForCandidate((idx + 1) as u8) {
+                break;
+            }
+            // look ahead: we can't have double preferences
+            if idx < (btl_buf.len() - 1) {
+                let (next_pref, _) = btl_buf[idx + 1];
+                if next_pref == pref {
+                    break;
+                }
+            }
+            form_buf.push(candidate_id);
+            last_valid = pref;
+        }
+
+        // must have at least six BTL prefrences
+        if last_valid < ::PreferenceForCandidate(6) {
+            form_buf.clear();
+        }
+
+        forms.push(form_buf.clone());
     }
-    Ok((rows))
+    Ok(forms)
 }
