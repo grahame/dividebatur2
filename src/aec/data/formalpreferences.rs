@@ -68,7 +68,6 @@ pub fn load(filename: &str, candidates: &::CandidateData) -> Result<Vec<Vec<::Ca
         btl_buf.sort();
 
         form_buf.clear();
-        let mut last_valid = ::PreferenceForCandidate(0);
         for idx in 0..btl_buf.len() {
             let (pref, candidate_id) = btl_buf[idx];
             // the preference at this index must be the index plus 1
@@ -83,15 +82,43 @@ pub fn load(filename: &str, candidates: &::CandidateData) -> Result<Vec<Vec<::Ca
                 }
             }
             form_buf.push(candidate_id);
-            last_valid = pref;
         }
 
-        // must have at least six BTL prefrences
-        if last_valid < ::PreferenceForCandidate(6) {
-            form_buf.clear();
+        // if we have at least six BTL prefrences, we have a valid form
+        if form_buf.len() >= 6 {
+            forms.push(form_buf.clone());
+            continue;
         }
 
-        forms.push(form_buf.clone());
+        for idx in 0..atl_buf.len() {
+            let (pref, group_id) = atl_buf[idx];
+            // the preference at this index must be the index plus 1
+            if pref != ::PreferenceForGroup((idx + 1) as u8) {
+                break;
+            }
+            // look ahead: we can't have double preferences
+            if idx < (atl_buf.len() - 1) {
+                let (next_pref, _) = atl_buf[idx + 1];
+                if next_pref == pref {
+                    break;
+                }
+            }
+            // valid ATL preference. push this form into the form_buf!
+            let group_name = &candidates.tickets[group_id.0 as usize];
+            form_buf.extend(&candidates.ticket_candidates[group_name]);
+        }
+
+        // anything ATL is good
+        if form_buf.len() > 0 {
+            forms.push(form_buf.clone());
+            continue;
+        } else {
+            println!("nothing formal");
+            println!("{:?}", record.preferences);
+            println!("{:?}", atl_buf);
+            println!("{:?}", btl_buf);
+            println!();
+        }
     }
     Ok(forms)
 }
