@@ -36,8 +36,15 @@ pub fn load(filename: &str) -> Result<Vec<Vec<u8>>, Box<Error>> {
             continue;
         }
         let record: AECFormalPreferencesRow = result?;
-        for _i in record.preferences.split(",").map(|v| if v.len() == 0 { 0 } else if v == "*" || v == "/" { 1 } else { v.parse::<u8>().unwrap() }) {
-
+        for (pref_idx, pref_str) in record.preferences.split(",").enumerate() {
+            let pref_v: u8 = if pref_str == "" {
+                continue
+            } else if pref_str == "*" || pref_str == "/" {
+                1
+            } else {
+                pref_str.parse::<u8>().unwrap()
+            };
+            println!("{} / {}", pref_v, pref_idx);
         }
     }
     Ok((rows))

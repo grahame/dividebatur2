@@ -11,16 +11,16 @@ use std::fs::File;
 #[derive(Debug,Deserialize)]
 pub struct AECAllCandidateRow {
     // the bits we actually care about
-    ticket: String,
-    ballot_position: u32,
-    surname: String,
+    pub ticket: String,
+    pub ballot_position: u32,
+    pub surname: String,
+    pub ballot_given_nm: String,
+    pub party_ballot_nm: String,
     // ... and the other bits
     txn_nm: String,
     nom_ty: String,
     state_ab: String,
     div_nm: String,
-    ballot_given_nm: String,
-    party_ballot_nm: String,
     occupation: String,
     address_1: String,
     address_2: String,
