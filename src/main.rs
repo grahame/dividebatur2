@@ -52,7 +52,7 @@ fn load_groups(candidates: Vec<aec::data::candidates::AECAllCandidateRow>) -> Ca
 }
 
 fn senate2015() {
-    let candidates = match aec::data::candidates::load("aec_data/fed2016/common/aec-senate-candidateinformation-20499.csv", "NSW") {
+    let candidates = match aec::data::candidates::load("aec_data/fed2016/common/aec-senate-candidateinformation-20499.csv", "WA") {
         Ok(rows) => rows,
         Err(error) => {
             panic!("Couldn't read candidates file: {:?}", error);
@@ -60,7 +60,7 @@ fn senate2015() {
     };
     let cd = load_groups(candidates);
 
-    let prefs = match aec::data::formalpreferences::load("aec_data/fed2016/nsw/data/aec-senate-formalpreferences-20499-NSW.csv", &cd) {
+    let prefs = match aec::data::formalpreferences::load("aec_data/fed2016/wa/data/aec-senate-formalpreferences-20499-WA.csv", &cd) {
         Ok(rows) => rows,
         Err(error) => {
             panic!("Couldn't read formal preferences file: {:?}", error);
