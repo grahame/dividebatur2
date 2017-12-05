@@ -25,10 +25,14 @@ pub struct AECFormalPreferencesRow {
     preferences: String,
 }
 
-pub fn load(filename: &str) -> Result<Vec<Vec<u8>>, Box<Error>> {
+pub fn load(filename: &str, candidates: &::CandidateData) -> Result<Vec<Vec<u8>>, Box<Error>> {
     let f = File::open(filename)?;
     let mut rdr = csv::Reader::from_reader(f);
     let mut rows: Vec<Vec<u8>> = Vec::new();
+
+    let n = 200;
+    let tickets = candidates.ticket_candidates.len();
+    // let mut pref_buf: Vec<u8> = Vec::with_capacity(tickets + (candidates.count as usize));
 
     for (idx, result) in rdr.deserialize().enumerate() {
         // the first row is always garbage (heading '----' markers)
@@ -36,6 +40,7 @@ pub fn load(filename: &str) -> Result<Vec<Vec<u8>>, Box<Error>> {
             continue;
         }
         let record: AECFormalPreferencesRow = result?;
+
         for (pref_idx, pref_str) in record.preferences.split(",").enumerate() {
             let pref_v: u8 = if pref_str == "" {
                 continue
@@ -44,7 +49,6 @@ pub fn load(filename: &str) -> Result<Vec<Vec<u8>>, Box<Error>> {
             } else {
                 pref_str.parse::<u8>().unwrap()
             };
-            println!("{} / {}", pref_v, pref_idx);
         }
     }
     Ok((rows))
