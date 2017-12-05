@@ -29,14 +29,16 @@ pub fn load(filename: &str) -> Result<Vec<Vec<u8>>, Box<Error>> {
     let f = File::open(filename)?;
     let mut rdr = csv::Reader::from_reader(f);
     let mut rows: Vec<Vec<u8>> = Vec::new();
+
     for (idx, result) in rdr.deserialize().enumerate() {
         // the first row is always garbage (heading '----' markers)
         if idx == 0 {
             continue;
         }
         let record: AECFormalPreferencesRow = result?;
-        let prefs: Vec<u8> = record.preferences.split(",").map(::parse_preference_value).collect();
-        // rows.push(prefs);
+        for _i in record.preferences.split(",").map(|v| if v.len() == 0 { 0 } else if v == "*" || v == "/" { 1 } else { v.parse::<u8>().unwrap() }) {
+
+        }
     }
     Ok((rows))
 }
