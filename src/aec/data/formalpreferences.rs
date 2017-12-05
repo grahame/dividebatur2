@@ -22,9 +22,6 @@ fn parse_preferences(raw_preferences: &String, candidates: &::CandidateData) -> 
     let mut btl_buf: Vec<(::PreferenceForCandidate, ::CandidateIndex)> = Vec::with_capacity(candidates.count);
     let mut form_buf: Vec<::CandidateIndex> = Vec::with_capacity(candidates.count);
 
-    atl_buf.clear();
-    btl_buf.clear();
-
     for (pref_idx, pref_str) in raw_preferences.split(",").enumerate() {
         let pref_v: u32 = if pref_str == "" {
             continue
@@ -41,10 +38,9 @@ fn parse_preferences(raw_preferences: &String, candidates: &::CandidateData) -> 
         }
     }
 
-    atl_buf.sort();
+    // Validate below-the-line preferences. If these are valid, they take
+    // precedence over any above-the-line preferences.
     btl_buf.sort();
-
-    form_buf.clear();
     for idx in 0..btl_buf.len() {
         let (pref, candidate_id) = btl_buf[idx];
         // the preference at this index must be the index plus 1
@@ -66,6 +62,8 @@ fn parse_preferences(raw_preferences: &String, candidates: &::CandidateData) -> 
         return form_buf.clone();
     }
 
+    // Validate and expand above-the-line preferences.
+    atl_buf.sort();
     for idx in 0..atl_buf.len() {
         let (pref, group_id) = atl_buf[idx];
         // the preference at this index must be the index plus 1
