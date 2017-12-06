@@ -118,5 +118,6 @@ pub fn load(filename: &str, candidates: &::CandidateData) -> Result<Vec<(usize, 
     }
     process(&mut work_buf, &mut keys);
 
-    Ok(keys.par_iter().map(|(k, v)| (v.clone(), k.clone())).collect())
+    let r = keys.drain().map(|(k, v)| (v, k)).collect();
+    Ok(r)
 }
