@@ -9,6 +9,7 @@ use std::error::Error;
 use std::fs::File;
 use std::collections::HashMap;
 use rayon::prelude::*;
+use defs::*;
 
 #[derive(Debug,Deserialize)]
 pub struct AECFormalPreferencesRow {
@@ -16,12 +17,12 @@ pub struct AECFormalPreferencesRow {
     preferences: String,
 }
 
-fn parse_preferences(raw_preferences: &String, candidates: &::CandidateData) -> Vec<::CandidateIndex> {
+fn parse_preferences(raw_preferences: &String, candidates: &CandidateData) -> Vec<CandidateIndex> {
     let ticket_count = candidates.ticket_candidates.len();
 
-    let mut atl_buf: Vec<(::PreferenceForGroup, ::GroupIndex)> = Vec::with_capacity(ticket_count);
-    let mut btl_buf: Vec<(::PreferenceForCandidate, ::CandidateIndex)> = Vec::with_capacity(candidates.count);
-    let mut form_buf: Vec<::CandidateIndex> = Vec::with_capacity(candidates.count);
+    let mut atl_buf: Vec<(PreferenceForGroup, GroupIndex)> = Vec::with_capacity(ticket_count);
+    let mut btl_buf: Vec<(PreferenceForCandidate, CandidateIndex)> = Vec::with_capacity(candidates.count);
+    let mut form_buf: Vec<CandidateIndex> = Vec::with_capacity(candidates.count);
 
     for (pref_idx, pref_str) in raw_preferences.split(",").enumerate() {
         let pref_v: u32 = if pref_str == "" {
@@ -33,9 +34,9 @@ fn parse_preferences(raw_preferences: &String, candidates: &::CandidateData) -> 
         };
 
         if pref_idx < ticket_count {
-            atl_buf.push((::PreferenceForGroup(pref_v as u8), ::GroupIndex(pref_idx as u8)));
+            atl_buf.push((PreferenceForGroup(pref_v as u8), GroupIndex(pref_idx as u8)));
         } else {
-            btl_buf.push((::PreferenceForCandidate(pref_v as u8), ::CandidateIndex(pref_idx as u8)));
+            btl_buf.push((PreferenceForCandidate(pref_v as u8), CandidateIndex(pref_idx as u8)));
         }
     }
 
@@ -45,7 +46,7 @@ fn parse_preferences(raw_preferences: &String, candidates: &::CandidateData) -> 
     for idx in 0..btl_buf.len() {
         let (pref, candidate_id) = btl_buf[idx];
         // the preference at this index must be the index plus 1
-        if pref != ::PreferenceForCandidate((idx + 1) as u8) {
+        if pref != PreferenceForCandidate((idx + 1) as u8) {
             break;
         }
         // look ahead: we can't have double preferences
@@ -68,7 +69,7 @@ fn parse_preferences(raw_preferences: &String, candidates: &::CandidateData) -> 
     for idx in 0..atl_buf.len() {
         let (pref, group_id) = atl_buf[idx];
         // the preference at this index must be the index plus 1
-        if pref != ::PreferenceForGroup((idx + 1) as u8) {
+        if pref != PreferenceForGroup((idx + 1) as u8) {
             break;
         }
         // look ahead: we can't have double preferences
@@ -88,15 +89,15 @@ fn parse_preferences(raw_preferences: &String, candidates: &::CandidateData) -> 
     return form_buf;
 }
 
-pub fn load(filename: &str, candidates: &::CandidateData) -> Result<Vec<(usize, Vec<::CandidateIndex>)>, Box<Error>> {
+pub fn load(filename: &str, candidates: &CandidateData) -> Result<Vec<BallotState>, Box<Error>> {
     let f = File::open(filename)?;
     let mut rdr = csv::Reader::from_reader(f);
     let hunk_size = 1024;
 
     let mut work_buf = Vec::new();
 
-    let process = |w: &mut Vec<String>, r: &mut HashMap<Vec<::CandidateIndex>, usize>| {
-        let partial: Vec<Vec<::CandidateIndex>> = w.par_iter().map(|p| parse_preferences(p, candidates)).collect();
+    let process = |w: &mut Vec<String>, r: &mut HashMap<Vec<CandidateIndex>, usize>| {
+        let partial: Vec<Vec<CandidateIndex>> = w.par_iter().map(|p| parse_preferences(p, candidates)).collect();
         for form in partial.iter() {
             let counter = r.entry(form.clone()).or_insert(0);
             *counter += 1;
@@ -104,7 +105,7 @@ pub fn load(filename: &str, candidates: &::CandidateData) -> Result<Vec<(usize, 
         w.clear();
     };
 
-    let mut keys: HashMap<Vec<::CandidateIndex>, usize> = HashMap::new();
+    let mut keys: HashMap<Vec<CandidateIndex>, usize> = HashMap::new();
     for (idx, result) in rdr.deserialize().enumerate() {
         if idx == 0 {
             continue;
@@ -118,6 +119,10 @@ pub fn load(filename: &str, candidates: &::CandidateData) -> Result<Vec<(usize, 
     }
     process(&mut work_buf, &mut keys);
 
-    let r = keys.drain().map(|(k, v)| (v, k)).collect();
+    let r = keys.drain().map(|(form, count)| BallotState {
+        form,
+        count,
+        active_preference: 0
+    }).collect();
     Ok(r)
 }
