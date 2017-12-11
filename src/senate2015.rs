@@ -4,9 +4,11 @@ use aec;
 
 fn load_groups(candidates: Vec<aec::data::candidates::AECAllCandidateRow>) -> CandidateData {
     let mut tickets = Vec::new();
+    let mut names = Vec::new();
     let mut ticket_candidates: HashMap<String, Vec<CandidateIndex>> = HashMap::new();
 
     for (idx, candidate) in candidates.iter().enumerate() {
+        names.push(format!("{}, {}", candidate.surname, candidate.ballot_given_nm));
         if candidate.ticket == "UG" {
             continue;
         }
@@ -17,6 +19,7 @@ fn load_groups(candidates: Vec<aec::data::candidates::AECAllCandidateRow>) -> Ca
     }
     CandidateData {
         count: candidates.len(),
+        names: names,
         tickets: tickets,
         ticket_candidates: ticket_candidates
     }
@@ -64,6 +67,7 @@ pub fn run() {
             panic!("Couldn't read candidates file: {:?}", error);
         }
     };
+    println!("candidates: {:?}", candidates.len());
     let cd = load_groups(candidates);
 
     let ballot_states = match aec::data::formalpreferences::load("aec_data/fed2016/nt/data/aec-senate-formalpreferences-20499-NT.csv", &cd) {
@@ -79,7 +83,7 @@ pub fn run() {
     let mut total = 0;
     for (candidate_id, cbt) in state.candidate_bundle_transactions {
         let a: u32 = cbt.iter().map(|bt| bt.votes).sum();
-        println!("{} votes for candidate_id {:?}", a, candidate_id);
+        println!("{} votes for candidate {}", a, cd.get_name(candidate_id));
         total += a;
     }
     println!("total = {}", total);

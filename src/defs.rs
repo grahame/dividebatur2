@@ -58,6 +58,13 @@ pub struct BundleTransaction {
 #[derive(Debug)]
 pub struct CandidateData {
     pub count: usize,
+    pub names: Vec<String>,
     pub tickets: Vec<String>,
     pub ticket_candidates: HashMap<String, Vec<CandidateIndex>>
+}
+
+impl CandidateData {
+    pub fn get_name(&self, idx: CandidateIndex) -> String {
+        return self.names[idx.0 as usize].clone();
+    }
 }

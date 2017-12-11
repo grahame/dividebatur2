@@ -36,7 +36,7 @@ fn parse_preferences(raw_preferences: &String, candidates: &CandidateData) -> Ve
         if pref_idx < ticket_count {
             atl_buf.push((PreferenceForGroup(pref_v as u8), GroupIndex(pref_idx as u8)));
         } else {
-            btl_buf.push((PreferenceForCandidate(pref_v as u8), CandidateIndex(pref_idx as u8)));
+            btl_buf.push((PreferenceForCandidate(pref_v as u8), CandidateIndex((pref_idx - ticket_count) as u8)));
         }
     }
 
