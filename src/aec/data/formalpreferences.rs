@@ -12,16 +12,26 @@ use rayon::prelude::*;
 use defs::*;
 
 #[derive(Debug,Deserialize)]
-pub struct AECFormalPreferencesRow {
+struct AECFormalPreferencesRow {
     #[serde(rename = "Preferences")]
     preferences: String,
 }
 
+// a voter's numerical preference for a candidate
+// if valid, it ranges from 1..N where N is the number of candidates
+#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Copy)]
+struct CandidatePreference(pub u8);
+
+// a voter's numerical preference for a group
+// if valid, it ranges from 1..N where N is the number of groups
+#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Copy)]
+struct GroupPreference(pub u8);
+
 fn parse_preferences(raw_preferences: &String, candidates: &CandidateData) -> Vec<CandidateIndex> {
     let ticket_count = candidates.ticket_candidates.len();
 
-    let mut atl_buf: Vec<(PreferenceForGroup, GroupIndex)> = Vec::with_capacity(ticket_count);
-    let mut btl_buf: Vec<(PreferenceForCandidate, CandidateIndex)> = Vec::with_capacity(candidates.count);
+    let mut atl_buf: Vec<(GroupPreference, GroupIndex)> = Vec::with_capacity(ticket_count);
+    let mut btl_buf: Vec<(CandidatePreference, CandidateIndex)> = Vec::with_capacity(candidates.count);
     let mut form_buf: Vec<CandidateIndex> = Vec::with_capacity(candidates.count);
 
     for (pref_idx, pref_str) in raw_preferences.split(",").enumerate() {
@@ -34,9 +44,9 @@ fn parse_preferences(raw_preferences: &String, candidates: &CandidateData) -> Ve
         };
 
         if pref_idx < ticket_count {
-            atl_buf.push((PreferenceForGroup(pref_v as u8), GroupIndex(pref_idx as u8)));
+            atl_buf.push((GroupPreference(pref_v as u8), GroupIndex(pref_idx as u8)));
         } else {
-            btl_buf.push((PreferenceForCandidate(pref_v as u8), CandidateIndex((pref_idx - ticket_count) as u8)));
+            btl_buf.push((CandidatePreference(pref_v as u8), CandidateIndex((pref_idx - ticket_count) as u8)));
         }
     }
 
@@ -46,7 +56,7 @@ fn parse_preferences(raw_preferences: &String, candidates: &CandidateData) -> Ve
     for idx in 0..btl_buf.len() {
         let (pref, candidate_id) = btl_buf[idx];
         // the preference at this index must be the index plus 1
-        if pref != PreferenceForCandidate((idx + 1) as u8) {
+        if pref != CandidatePreference((idx + 1) as u8) {
             break;
         }
         // look ahead: we can't have double preferences
@@ -69,7 +79,7 @@ fn parse_preferences(raw_preferences: &String, candidates: &CandidateData) -> Ve
     for idx in 0..atl_buf.len() {
         let (pref, group_id) = atl_buf[idx];
         // the preference at this index must be the index plus 1
-        if pref != PreferenceForGroup((idx + 1) as u8) {
+        if pref != GroupPreference((idx + 1) as u8) {
             break;
         }
         // look ahead: we can't have double preferences

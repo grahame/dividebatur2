@@ -14,16 +14,6 @@ pub struct CandidateIndex(pub u8);
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Copy)]
 pub struct GroupIndex(pub u8);
 
-// a voter's numerical preference for a candidate
-// if valid, it ranges from 1..N where N is the number of candidates
-#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Copy)]
-pub struct PreferenceForCandidate(pub u8);
-
-// a voter's numerical preference for a group
-// if valid, it ranges from 1..N where N is the number of groups
-#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Copy)]
-pub struct PreferenceForGroup(pub u8);
-
 // one ore more ballots entered into the count, all with the
 // same form, and the current state of those ballots within
 // the count (e.g. the current preference)
@@ -59,6 +49,7 @@ pub struct BundleTransaction {
 pub struct CandidateData {
     pub count: usize,
     pub names: Vec<String>,
+    pub parties: Vec<String>,
     pub tickets: Vec<String>,
     pub ticket_candidates: HashMap<String, Vec<CandidateIndex>>
 }
@@ -66,5 +57,8 @@ pub struct CandidateData {
 impl CandidateData {
     pub fn get_name(&self, idx: CandidateIndex) -> String {
         return self.names[idx.0 as usize].clone();
+    }
+    pub fn get_party(&self, idx: CandidateIndex) -> String {
+        return self.parties[idx.0 as usize].clone();
     }
 }

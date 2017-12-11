@@ -5,10 +5,12 @@ use aec;
 fn load_groups(candidates: Vec<aec::data::candidates::AECAllCandidateRow>) -> CandidateData {
     let mut tickets = Vec::new();
     let mut names = Vec::new();
+    let mut parties = Vec::new();
     let mut ticket_candidates: HashMap<String, Vec<CandidateIndex>> = HashMap::new();
 
     for (idx, candidate) in candidates.iter().enumerate() {
         names.push(format!("{}, {}", candidate.surname, candidate.ballot_given_nm));
+        parties.push(candidate.party_ballot_nm.clone());
         if candidate.ticket == "UG" {
             continue;
         }
@@ -20,6 +22,7 @@ fn load_groups(candidates: Vec<aec::data::candidates::AECAllCandidateRow>) -> Ca
     CandidateData {
         count: candidates.len(),
         names: names,
+        parties: parties,
         tickets: tickets,
         ticket_candidates: ticket_candidates
     }
@@ -37,11 +40,11 @@ struct CountState {
 fn build_initial_state(ballot_states: Vec<BallotState>) -> CountState {
     let mut by_candidate: HashMap<CandidateIndex, Vec<BallotState>> = HashMap::new();
     for ballot_state in ballot_states.into_iter() {
-        let pref = match ballot_state.current_preference() {
+        let candidate_id = match ballot_state.current_preference() {
             Some(p) => p,
             None => panic!("informal ballot in initial ballots")
         };
-        let v = by_candidate.entry(pref).or_insert(Vec::new());
+        let v = by_candidate.entry(candidate_id).or_insert(Vec::new());
         v.push(ballot_state);
     }
     let mut ctbt = HashMap::new();
@@ -83,7 +86,7 @@ pub fn run() {
     let mut total = 0;
     for (candidate_id, cbt) in state.candidate_bundle_transactions {
         let a: u32 = cbt.iter().map(|bt| bt.votes).sum();
-        println!("{} votes for candidate {}", a, cd.get_name(candidate_id));
+        println!("{} votes for candidate {} ({})", a, cd.get_name(candidate_id), cd.get_party(candidate_id));
         total += a;
     }
     println!("total = {}", total);
