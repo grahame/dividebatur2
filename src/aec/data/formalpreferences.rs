@@ -35,18 +35,18 @@ fn parse_preferences(raw_preferences: &String, candidates: &CandidateData) -> Ve
     let mut form_buf: Vec<CandidateIndex> = Vec::with_capacity(candidates.count);
 
     for (pref_idx, pref_str) in raw_preferences.split(",").enumerate() {
-        let pref_v: u32 = if pref_str == "" {
+        let pref_v: u8 = if pref_str == "" {
             continue
         } else if pref_str == "*" || pref_str == "/" {
             1
         } else {
-            pref_str.parse::<u32>().unwrap()
+            pref_str.parse::<u8>().unwrap()
         };
 
         if pref_idx < ticket_count {
-            atl_buf.push((GroupPreference(pref_v as u8), GroupIndex(pref_idx as u8)));
+            atl_buf.push((GroupPreference(pref_v), GroupIndex(pref_idx as u8)));
         } else {
-            btl_buf.push((CandidatePreference(pref_v as u8), CandidateIndex((pref_idx - ticket_count) as u8)));
+            btl_buf.push((CandidatePreference(pref_v), CandidateIndex((pref_idx - ticket_count) as u8)));
         }
     }
 
