@@ -30,8 +30,18 @@ pub struct PreferenceForGroup(pub u8);
 #[derive(Debug)]
 pub struct BallotState { 
     pub form: Vec<CandidateIndex>,
-    pub count: usize,
+    pub count: u32,
     pub active_preference: usize
+}
+
+impl BallotState {
+    pub fn current_preference(&self) -> Option<CandidateIndex> {
+        if self.active_preference < self.form.len() {
+            Some(self.form[self.active_preference])
+        } else {
+            None
+        }
+    }
 }
 
 // a collection of ballot states, all of which were transferred to
@@ -42,9 +52,8 @@ pub struct BallotState {
 pub struct BundleTransaction {
     pub ballot_states: Vec<BallotState>,
     pub transfer_value: u32,
-    pub votes: u32,
+    pub votes: u32
 }
-
 
 #[derive(Debug)]
 pub struct CandidateData {

@@ -96,7 +96,7 @@ pub fn load(filename: &str, candidates: &CandidateData) -> Result<Vec<BallotStat
 
     let mut work_buf = Vec::new();
 
-    let process = |w: &mut Vec<String>, r: &mut HashMap<Vec<CandidateIndex>, usize>| {
+    let process = |w: &mut Vec<String>, r: &mut HashMap<Vec<CandidateIndex>, u32>| {
         let partial: Vec<Vec<CandidateIndex>> = w.par_iter().map(|p| parse_preferences(p, candidates)).collect();
         for form in partial.iter() {
             let counter = r.entry(form.clone()).or_insert(0);
@@ -105,7 +105,7 @@ pub fn load(filename: &str, candidates: &CandidateData) -> Result<Vec<BallotStat
         w.clear();
     };
 
-    let mut keys: HashMap<Vec<CandidateIndex>, usize> = HashMap::new();
+    let mut keys: HashMap<Vec<CandidateIndex>, u32> = HashMap::new();
     for (idx, result) in rdr.deserialize().enumerate() {
         if idx == 0 {
             continue;
