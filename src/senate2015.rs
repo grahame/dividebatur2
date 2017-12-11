@@ -76,8 +76,11 @@ pub fn run() {
     println!("{} unique bundle states at commencement of count.", ballot_states.len());
 
     let state = build_initial_state(ballot_states);
+    let mut total = 0;
     for (candidate_id, cbt) in state.candidate_bundle_transactions {
         let a: u32 = cbt.iter().map(|bt| bt.votes).sum();
-        println!("candidate_id {:?} votes {}", candidate_id, a);
+        println!("{} votes for candidate_id {:?}", a, candidate_id);
+        total += a;
     }
+    println!("total = {}", total);
 }
