@@ -2,8 +2,6 @@
  * core types
  */
 
-use std::collections::HashMap;
-
 // represents a candidate's index on the ballot paper
 // ranges from 0..N-1 where N is the number of candidates
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Copy, Hash)]
@@ -50,8 +48,7 @@ pub struct CandidateData {
     pub count: usize,
     pub names: Vec<String>,
     pub parties: Vec<String>,
-    pub tickets: Vec<String>,
-    pub ticket_candidates: HashMap<String, Vec<CandidateIndex>>
+    pub tickets: Vec<Vec<CandidateIndex>>
 }
 
 impl CandidateData {

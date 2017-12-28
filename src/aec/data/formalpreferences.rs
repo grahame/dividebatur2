@@ -28,7 +28,7 @@ struct CandidatePreference(pub u8);
 struct GroupPreference(pub u8);
 
 fn parse_preferences(raw_preferences: &String, candidates: &CandidateData) -> Vec<CandidateIndex> {
-    let ticket_count = candidates.ticket_candidates.len();
+    let ticket_count = candidates.tickets.len();
 
     let mut atl_buf: Vec<(GroupPreference, GroupIndex)> = Vec::with_capacity(ticket_count);
     let mut btl_buf: Vec<(CandidatePreference, CandidateIndex)> = Vec::with_capacity(candidates.count);
@@ -90,8 +90,7 @@ fn parse_preferences(raw_preferences: &String, candidates: &CandidateData) -> Ve
             }
         }
         // valid ATL preference. push this form into the form_buf!
-        let group_name = &candidates.tickets[group_id.0 as usize];
-        form_buf.extend(&candidates.ticket_candidates[group_name]);
+        form_buf.extend(&candidates.tickets[group_id.0 as usize]);
     }
 
     assert!(form_buf.len() > 0);
@@ -107,7 +106,7 @@ pub fn load(filename: &str, candidates: &CandidateData) -> Result<Vec<BallotStat
     let mut work_buf = Vec::new();
 
     let process = |w: &mut Vec<String>, r: &mut HashMap<Vec<CandidateIndex>, u32>| {
-        let partial: Vec<Vec<CandidateIndex>> = w.par_iter().map(|p| parse_preferences(p, candidates)).collect();
+        let partial: Vec<Vec<CandidateIndex>> = w.iter().map(|p| parse_preferences(p, candidates)).collect();
         for form in partial.iter() {
             let counter = r.entry(form.clone()).or_insert(0);
             *counter += 1;
@@ -135,4 +134,25 @@ pub fn load(filename: &str, candidates: &CandidateData) -> Result<Vec<BallotStat
         active_preference: 0
     }).collect();
     Ok(r)
+
+}
+
+#[cfg(test)]
+mod tests {
+    use defs::*;
+    use super::*;
+
+    #[test]
+    fn it_works() {
+        let cd = CandidateData {
+            count: 19,
+            names: vec![],
+            parties: vec![],
+            tickets: vec![vec![CandidateIndex(0), CandidateIndex(1)], vec![CandidateIndex(2), CandidateIndex(3)], vec![CandidateIndex(4), CandidateIndex(5)], vec![CandidateIndex(6), CandidateIndex(7)], vec![CandidateIndex(8), CandidateIndex(9)], vec![CandidateIndex(10), CandidateIndex(11)], vec![CandidateIndex(12), CandidateIndex(13)]]
+        };
+        let line = String::from("5,7,3,4,1,2,6,5,6,11,12,3,4,9,10,1,2,2,3,7,8,,,,,");
+        let a  = parse_preferences(&line, &cd);
+        println!("{:?}", a);
+        panic!();
+    }
 }

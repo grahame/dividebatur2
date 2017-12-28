@@ -3,28 +3,33 @@ use defs::*;
 use aec;
 
 fn load_groups(candidates: Vec<aec::data::candidates::AECAllCandidateRow>) -> CandidateData {
-    let mut tickets = Vec::new();
     let mut names = Vec::new();
     let mut parties = Vec::new();
-    let mut ticket_candidates: HashMap<String, Vec<CandidateIndex>> = HashMap::new();
 
+    let mut current_ticket = String::from("");
+    let mut tickets = Vec::new();
+
+    // NB: the Candidate Rows are sorted into ballot paper order
     for (idx, candidate) in candidates.iter().enumerate() {
         names.push(format!("{}, {}", candidate.surname, candidate.ballot_given_nm));
         parties.push(candidate.party_ballot_nm.clone());
         if candidate.ticket == "UG" {
             continue;
         }
-        ticket_candidates.entry(candidate.ticket.clone()).or_insert_with(|| {
-            tickets.push(candidate.ticket.clone());
-            Vec::new()
-        }).push(CandidateIndex(idx as u8));
+
+        if candidate.ticket != current_ticket {
+            tickets.push(Vec::new());
+            current_ticket = candidate.ticket.clone();
+        }
+
+        let p = tickets.len() - 1;
+        tickets[p].push(CandidateIndex(idx as u8));
     }
     CandidateData {
         count: candidates.len(),
         names: names,
         parties: parties,
-        tickets: tickets,
-        ticket_candidates: ticket_candidates
+        tickets: tickets
     }
 }
 
