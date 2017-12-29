@@ -74,8 +74,10 @@ fn parse_preferences(raw_preferences: &String, candidates: &CandidateData) -> Ve
         return form_buf.clone();
     }
 
-    // Validate and expand above-the-line preferences.
+    // we don't have a valid BTL form, validate and expand above-the-line
+    // preferences
     form_buf.clear();
+
     atl_buf.sort();
     for idx in 0..atl_buf.len() {
         let (pref, group_index) = atl_buf[idx];
@@ -107,7 +109,7 @@ pub fn load(filename: &str, candidates: &CandidateData) -> Result<Vec<BallotStat
     let mut work_buf = Vec::new();
 
     let process = |w: &mut Vec<String>, r: &mut HashMap<Vec<CandidateIndex>, u32>| {
-        let partial: Vec<Vec<CandidateIndex>> = w.iter().map(|p| parse_preferences(p, candidates)).collect();
+        let partial: Vec<Vec<CandidateIndex>> = w.par_iter().map(|p| parse_preferences(p, candidates)).collect();
         for form in partial.iter() {
             let counter = r.entry(form.clone()).or_insert(0);
             *counter += 1;
@@ -135,7 +137,6 @@ pub fn load(filename: &str, candidates: &CandidateData) -> Result<Vec<BallotStat
         active_preference: 0
     }).collect();
     Ok(r)
-
 }
 
 #[cfg(test)]
