@@ -34,8 +34,8 @@ fn load_groups(candidates: Vec<aec::data::candidates::AECAllCandidateRow>) -> Ca
 }
 
 // all bundle transactions held by a candidate, in a given round of the count
-type CandidateBundleTransaction = Vec<BundleTransaction>;
-type CandidateToBundleTransaction = HashMap<CandidateIndex, CandidateBundleTransaction>;
+type CandidateBundleTransactions = Vec<BundleTransaction>;
+type CandidateToBundleTransaction = HashMap<CandidateIndex, CandidateBundleTransactions>;
 
 #[derive(Debug)]
 struct CountState {
@@ -54,7 +54,7 @@ fn build_initial_state(ballot_states: Vec<BallotState>) -> CountState {
     }
     let mut ctbt = HashMap::new();
     for (candidate_id, ballot_states) in by_candidate.drain() {
-        let t = ctbt.entry(candidate_id).or_insert(CandidateBundleTransaction::new());
+        let t = ctbt.entry(candidate_id).or_insert(CandidateBundleTransactions::new());
         let votes = ballot_states.iter().map(|bs| bs.count).sum();
         let bt = BundleTransaction {
             ballot_states: ballot_states,

@@ -39,6 +39,7 @@ impl BallotState {
 #[derive(Debug)]
 pub struct BundleTransaction {
     pub ballot_states: Vec<BallotState>,
+    // FIXME: this should be a rational number, not an integer
     pub transfer_value: u32,
     pub votes: u32
 }
