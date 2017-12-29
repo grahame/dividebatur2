@@ -86,7 +86,7 @@ impl SenateCount {
         }
     }
 
-    fn print_debug(&self, cd: CandidateData) {
+    fn print_debug(&self, cd: &CandidateData) {
         println!("-- SenateCount::print_debug (round {}) --", self.counts);
         println!("Candidates: {}", self.candidates);
         println!("Total papers: {}", self.total_papers);
@@ -96,6 +96,11 @@ impl SenateCount {
             let a: u32 = cbt.iter().map(|bt| bt.votes).sum();
             println!("    {} votes for candidate {} ({})", a, cd.get_name(*candidate_id), cd.get_party(*candidate_id));
         }
+    }
+
+    fn execute_count(&mut self) -> bool {
+        self.counts += 1;
+        false
     }
 }
 
@@ -117,6 +122,12 @@ pub fn run() {
 
     println!("{} unique bundle states at commencement of count.", ballot_states.len());
 
-    let count = SenateCount::new(2, cd.count as u32, ballot_states);
-    count.print_debug(cd);
+    let candidate_count = cd.count.clone();
+    let mut count = SenateCount::new(2, candidate_count as u32, ballot_states);
+    while {
+        let done = count.execute_count();
+        count.print_debug(&cd);
+        done
+    } { }
+    println!("Count terminated after {} counts.", count.counts);
 }
