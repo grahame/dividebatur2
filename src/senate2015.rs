@@ -1,8 +1,10 @@
 use std::collections::HashMap;
 use defs::*;
 use aec;
+use num::FromPrimitive;
+use num::rational::{Ratio};
 
-fn load_groups(candidates: Vec<aec::data::candidates::AECAllCandidateRow>) -> CandidateData {
+fn load_candidate_data(candidates: Vec<aec::data::candidates::AECAllCandidateRow>) -> CandidateData {
     let mut names = Vec::new();
     let mut parties = Vec::new();
 
@@ -38,33 +40,62 @@ type CandidateBundleTransactions = Vec<BundleTransaction>;
 type CandidateToBundleTransaction = HashMap<CandidateIndex, CandidateBundleTransactions>;
 
 #[derive(Debug)]
-struct CountState {
-    candidate_bundle_transactions: CandidateToBundleTransaction
+struct SenateCount {
+    candidate_bundle_transactions: CandidateToBundleTransaction,
+    total_papers: u32,
+    candidates: u32,
+    counts: u32,
+    quota: u32,
 }
 
-fn build_initial_state(ballot_states: Vec<BallotState>) -> CountState {
-    let mut by_candidate: HashMap<CandidateIndex, Vec<BallotState>> = HashMap::new();
-    for ballot_state in ballot_states.into_iter() {
-        let candidate_id = match ballot_state.current_preference() {
-            Some(p) => p,
-            None => panic!("informal ballot in initial ballots")
-        };
-        let v = by_candidate.entry(candidate_id).or_insert(Vec::new());
-        v.push(ballot_state);
+impl SenateCount {
+    fn determine_quota(total_papers: u32, vacancies: u32) -> u32 {
+        (total_papers / (vacancies + 1)) + 1
     }
-    let mut ctbt = HashMap::new();
-    for (candidate_id, ballot_states) in by_candidate.drain() {
-        let t = ctbt.entry(candidate_id).or_insert(CandidateBundleTransactions::new());
-        let votes = ballot_states.iter().map(|bs| bs.count).sum();
-        let bt = BundleTransaction {
-            ballot_states: ballot_states,
-            transfer_value: 1,
-            votes: votes,
-        };
-        t.push(bt);
+
+    fn new(vacancies: u32, candidates: u32, ballot_states: Vec<BallotState>) -> SenateCount {
+        let mut by_candidate: HashMap<CandidateIndex, Vec<BallotState>> = HashMap::new();
+        for ballot_state in ballot_states.into_iter() {
+            let candidate_id = match ballot_state.current_preference() {
+                Some(p) => p,
+                None => panic!("informal ballot in initial ballots")
+            };
+            let v = by_candidate.entry(candidate_id).or_insert(Vec::new());
+            v.push(ballot_state);
+        }
+        let mut ctbt = HashMap::new();
+        let ratio_one = Ratio::from_integer(FromPrimitive::from_u32(1).unwrap()) / Ratio::from_integer(FromPrimitive::from_u32(1).unwrap());
+        let mut total_papers = 0;
+        for (candidate_id, ballot_states) in by_candidate.drain() {
+            let t = ctbt.entry(candidate_id).or_insert(CandidateBundleTransactions::new());
+            let votes = ballot_states.iter().map(|bs| bs.count).sum();
+            total_papers += votes;
+            let bt = BundleTransaction {
+                ballot_states: ballot_states,
+                transfer_value: ratio_one.clone(),
+                votes: votes,
+            };
+            t.push(bt);
+        }
+        SenateCount {
+            candidates: candidates,
+            candidate_bundle_transactions: ctbt,
+            total_papers: total_papers,
+            counts: 0,
+            quota: SenateCount::determine_quota(total_papers, vacancies)
+        }
     }
-    CountState {
-        candidate_bundle_transactions: ctbt
+
+    fn print_debug(&self, cd: CandidateData) {
+        println!("-- SenateCount::print_debug (round {}) --", self.counts);
+        println!("Candidates: {}", self.candidates);
+        println!("Total papers: {}", self.total_papers);
+        println!("Quota: {}", self.quota);
+        println!("Candidate totals:");
+        for (candidate_id, cbt) in self.candidate_bundle_transactions.iter() {
+            let a: u32 = cbt.iter().map(|bt| bt.votes).sum();
+            println!("    {} votes for candidate {} ({})", a, cd.get_name(*candidate_id), cd.get_party(*candidate_id));
+        }
     }
 }
 
@@ -75,8 +106,7 @@ pub fn run() {
             panic!("Couldn't read candidates file: {:?}", error);
         }
     };
-    println!("candidates: {:?}", candidates.len());
-    let cd = load_groups(candidates);
+    let cd = load_candidate_data(candidates);
 
     let ballot_states = match aec::data::formalpreferences::load("aec_data/fed2016/nt/data/aec-senate-formalpreferences-20499-NT.csv", &cd) {
         Ok(data) => data,
@@ -87,12 +117,6 @@ pub fn run() {
 
     println!("{} unique bundle states at commencement of count.", ballot_states.len());
 
-    let state = build_initial_state(ballot_states);
-    let mut total = 0;
-    for (candidate_id, cbt) in state.candidate_bundle_transactions {
-        let a: u32 = cbt.iter().map(|bt| bt.votes).sum();
-        println!("{} votes for candidate {} ({})", a, cd.get_name(candidate_id), cd.get_party(candidate_id));
-        total += a;
-    }
-    println!("total = {}", total);
+    let count = SenateCount::new(2, cd.count as u32, ballot_states);
+    count.print_debug(cd);
 }

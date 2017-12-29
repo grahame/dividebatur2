@@ -2,6 +2,8 @@
  * core types
  */
 
+use num::rational::{BigRational};
+
 // represents a candidate's index on the ballot paper
 // ranges from 0..N-1 where N is the number of candidates
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Copy, Hash)]
@@ -35,12 +37,12 @@ impl BallotState {
 // a collection of ballot states, all of which were transferred to
 // the total of a candidate during a count. the member `votes`
 // represents the integer value of the votes transferred to the
-// candidate, after the application of the transfer value
+// candidate, after the application of the transfer value to the
+// total number of papers in the transaction
 #[derive(Debug)]
 pub struct BundleTransaction {
     pub ballot_states: Vec<BallotState>,
-    // FIXME: this should be a rational number, not an integer
-    pub transfer_value: u32,
+    pub transfer_value: BigRational,
     pub votes: u32
 }
 
