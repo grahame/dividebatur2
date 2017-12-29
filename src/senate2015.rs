@@ -3,6 +3,7 @@ use defs::*;
 use aec;
 use num::FromPrimitive;
 use num::rational::{Ratio};
+use std::ascii::AsciiExt;
 
 fn load_candidate_data(candidates: Vec<aec::data::candidates::AECAllCandidateRow>) -> CandidateData {
     let mut names = Vec::new();
@@ -147,6 +148,13 @@ impl SenateCount {
         elected
     }
 
+    fn elect(&mut self, candidate: CandidateIndex) {
+        if self.elected.contains(&candidate) { 
+            panic!("Candidate elected twice");
+        }
+        self.elected.push(candidate);
+    }
+
     fn execute_count(&mut self) -> bool {
         self.counts += 1;
         // action execution to come
@@ -154,7 +162,7 @@ impl SenateCount {
         // has anyone been elected in this count?
         let newly_elected = self.determine_elected_candidates();
         for candidate in newly_elected {
-            self.elected.push(candidate);
+            self.elect(candidate);
             if self.elected.len() as u32 == self.vacancies {
                 return false;
             }
@@ -163,8 +171,8 @@ impl SenateCount {
     }
 }
 
-pub fn run() {
-    let candidates = match aec::data::candidates::load("aec_data/fed2016/common/aec-senate-candidateinformation-20499.csv", "NT") {
+fn run_state(state: &str, vacancies: u32) {
+    let candidates = match aec::data::candidates::load("aec_data/fed2016/common/aec-senate-candidateinformation-20499.csv", state) {
         Ok(rows) => rows,
         Err(error) => {
             panic!("Couldn't read candidates file: {:?}", error);
@@ -172,7 +180,9 @@ pub fn run() {
     };
     let cd = load_candidate_data(candidates);
 
-    let ballot_states = match aec::data::formalpreferences::load("aec_data/fed2016/nt/data/aec-senate-formalpreferences-20499-NT.csv", &cd) {
+    let prefpath = format!("aec_data/fed2016/{}/data/aec-senate-formalpreferences-20499-{}.csv", state.to_ascii_lowercase(), state.to_ascii_uppercase());
+
+    let ballot_states = match aec::data::formalpreferences::load(&prefpath[..], &cd) {
         Ok(data) => data,
         Err(error) => {
             panic!("Couldn't read formal preferences file: {:?}", error);
@@ -182,11 +192,15 @@ pub fn run() {
     println!("{} unique bundle states at commencement of count.", ballot_states.len());
 
     let candidate_count = cd.count.clone();
-    let mut count = SenateCount::new(2, candidate_count as u32, ballot_states);
+    let mut count = SenateCount::new(vacancies, candidate_count as u32, ballot_states);
     while {
         let done = count.execute_count();
         count.print_debug(&cd);
         done
     } { }
     println!("Count terminated after {} counts.", count.counts);
+}
+
+pub fn run() {
+    run_state("TAS", 12);
 }
