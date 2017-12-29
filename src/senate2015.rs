@@ -36,16 +36,34 @@ fn load_candidate_data(candidates: Vec<aec::data::candidates::AECAllCandidateRow
 }
 
 // all bundle transactions held by a candidate, in a given round of the count
-type CandidateBundleTransactions = Vec<BundleTransaction>;
+#[derive(Debug)]
+struct CandidateBundleTransactions {
+    bundle_transactions: Vec<BundleTransaction>
+}
+
 type CandidateToBundleTransaction = HashMap<CandidateIndex, CandidateBundleTransactions>;
+
+impl CandidateBundleTransactions {
+    fn total_votes(&self) -> u32 {
+        self.bundle_transactions.iter().map(|bt| bt.votes).sum()
+    }
+    fn new() -> CandidateBundleTransactions {
+        CandidateBundleTransactions {
+            bundle_transactions: Vec::new()
+        }
+    }
+}
 
 #[derive(Debug)]
 struct SenateCount {
+    candidates: u32,
+    vacancies: u32,
     candidate_bundle_transactions: CandidateToBundleTransaction,
     total_papers: u32,
-    candidates: u32,
     counts: u32,
     quota: u32,
+    elected: Vec<CandidateIndex>,
+    excluded: Vec<CandidateIndex>
 }
 
 impl SenateCount {
@@ -75,14 +93,17 @@ impl SenateCount {
                 transfer_value: ratio_one.clone(),
                 votes: votes,
             };
-            t.push(bt);
+            t.bundle_transactions.push(bt);
         }
         SenateCount {
             candidates: candidates,
+            vacancies: vacancies,
             candidate_bundle_transactions: ctbt,
             total_papers: total_papers,
             counts: 0,
-            quota: SenateCount::determine_quota(total_papers, vacancies)
+            quota: SenateCount::determine_quota(total_papers, vacancies),
+            elected: Vec::new(),
+            excluded: Vec::new(),
         }
     }
 
@@ -93,14 +114,52 @@ impl SenateCount {
         println!("Quota: {}", self.quota);
         println!("Candidate totals:");
         for (candidate_id, cbt) in self.candidate_bundle_transactions.iter() {
-            let a: u32 = cbt.iter().map(|bt| bt.votes).sum();
+            let a: u32 = cbt.total_votes();
             println!("    {} votes for candidate {} ({})", a, cd.get_name(*candidate_id), cd.get_party(*candidate_id));
         }
+        println!("Candidates elected: {:?}", self.elected);
+        println!("Candidates excluded: {:?}", self.excluded);
+    }
+
+    fn determine_elected_candidates(&mut self) -> Vec<CandidateIndex> {
+        // determine all candidates whose vote total is over the threshold; bin by
+        // the number of votes they are holding, so we can determine any ties
+        let mut votes_candidate: HashMap<u32, Vec<CandidateIndex>> = HashMap::new();
+        for (candidate_id, cbt) in self.candidate_bundle_transactions.iter() {
+            let votes = cbt.total_votes();
+            if votes > self.quota {
+                let v = votes_candidate.entry(cbt.total_votes()).or_insert(Vec::new());
+                v.push(*candidate_id);
+            }
+        }
+ 
+        let mut elected: Vec<CandidateIndex> = Vec::new();
+        let mut possible: Vec<(&u32, &Vec<CandidateIndex>)> = votes_candidate.iter().collect();
+        possible.sort_by(|a, b| b.0.cmp(a.0));
+        for (_votes, candidate_ids) in possible.into_iter() {
+            // no tie in the ordering: elect this candidate
+            if candidate_ids.len() == 1 {
+                elected.push(candidate_ids[0]);
+            } else {
+                panic!("Election ordering ties are not yet implemented.");
+            }
+        }
+        elected
     }
 
     fn execute_count(&mut self) -> bool {
         self.counts += 1;
-        false
+        // action execution to come
+
+        // has anyone been elected in this count?
+        let newly_elected = self.determine_elected_candidates();
+        for candidate in newly_elected {
+            self.elected.push(candidate);
+            if self.elected.len() as u32 == self.vacancies {
+                return false;
+            }
+        }
+        panic!("unreachable");
     }
 }
 
