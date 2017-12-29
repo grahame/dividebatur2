@@ -75,9 +75,10 @@ fn parse_preferences(raw_preferences: &String, candidates: &CandidateData) -> Ve
     }
 
     // Validate and expand above-the-line preferences.
+    form_buf.clear();
     atl_buf.sort();
     for idx in 0..atl_buf.len() {
-        let (pref, group_id) = atl_buf[idx];
+        let (pref, group_index) = atl_buf[idx];
         // the preference at this index must be the index plus 1
         if pref != GroupPreference((idx + 1) as u8) {
             break;
@@ -90,7 +91,7 @@ fn parse_preferences(raw_preferences: &String, candidates: &CandidateData) -> Ve
             }
         }
         // valid ATL preference. push this form into the form_buf!
-        form_buf.extend(&candidates.tickets[group_id.0 as usize]);
+        form_buf.extend(&candidates.tickets[group_index.0 as usize]);
     }
 
     assert!(form_buf.len() > 0);
@@ -139,7 +140,6 @@ pub fn load(filename: &str, candidates: &CandidateData) -> Result<Vec<BallotStat
 
 #[cfg(test)]
 mod tests {
-    use defs::*;
     use super::*;
 
     #[test]
@@ -153,6 +153,5 @@ mod tests {
         let line = String::from("5,7,3,4,1,2,6,5,6,11,12,3,4,9,10,1,2,2,3,7,8,,,,,");
         let a  = parse_preferences(&line, &cd);
         println!("{:?}", a);
-        panic!();
     }
 }
