@@ -59,12 +59,13 @@ fn run_state(state: &str, vacancies: u32) {
     engine.print_debug(&cd);
     while {
         match engine.count() {
-            CountOutcome::CountComplete(nrounds) => {
+            CountOutcome::CountComplete(nrounds, state) => {
                 engine.print_debug(&cd);
+                println!("{:?}", state);
                 println!("Election complete after {} rounds of counting.", nrounds);
                 false
             }
-            CountOutcome::CountContinues(_) => {
+            CountOutcome::CountContinues(_, _) => {
                 engine.print_debug(&cd);
                 true
             }

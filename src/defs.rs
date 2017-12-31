@@ -43,7 +43,8 @@ impl BallotState {
 pub struct BundleTransaction {
     pub ballot_states: Vec<BallotState>,
     pub transfer_value: BigRational,
-    pub votes: u32
+    pub votes: u32,
+    pub papers: u32,
 }
 
 #[derive(Debug)]

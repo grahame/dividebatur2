@@ -5,8 +5,16 @@ use num::rational::{Ratio};
 
 #[derive(Debug)]
 pub enum CountOutcome {
-    CountComplete(u32),
-    CountContinues(u32)
+    CountComplete(usize, CountState),
+    CountContinues(usize, CountState)
+}
+
+#[derive(Debug, Clone)]
+pub struct CountState {
+    pub votes_per_candidate: HashMap<CandidateIndex, u32>,
+    pub papers_per_candidate: HashMap<CandidateIndex, u32>,
+    pub votes_exhausted: u32,
+    pub papers_exhausted: u32,
 }
 
 #[derive(Debug)]
@@ -15,10 +23,10 @@ pub struct CountEngine {
     vacancies: u32,
     candidate_bundle_transactions: CandidateToBundleTransaction,
     total_papers: u32,
-    pub counts: u32,
+    count_states: Vec<CountState>,
     quota: u32,
     elected: Vec<CandidateIndex>,
-    excluded: Vec<CandidateIndex>
+    excluded: Vec<CandidateIndex>,
 }
 
 // all bundle transactions held by a candidate, in a given round of the count
@@ -32,6 +40,9 @@ type CandidateToBundleTransaction = HashMap<CandidateIndex, CandidateBundleTrans
 impl CandidateBundleTransactions {
     fn total_votes(&self) -> u32 {
         self.bundle_transactions.iter().map(|bt| bt.votes).sum()
+    }
+    fn total_papers(&self) -> u32 {
+        self.bundle_transactions.iter().map(|bt| bt.papers).sum()
     }
     fn new() -> CandidateBundleTransactions {
         CandidateBundleTransactions {
@@ -67,6 +78,7 @@ impl CountEngine {
                 ballot_states: ballot_states,
                 transfer_value: ratio_one.clone(),
                 votes: votes,
+                papers: votes,
             };
             t.bundle_transactions.push(bt);
         }
@@ -75,7 +87,7 @@ impl CountEngine {
             vacancies: vacancies,
             candidate_bundle_transactions: ctbt,
             total_papers: total_papers,
-            counts: 0,
+            count_states: Vec::new(),
             quota: CountEngine::determine_quota(total_papers, vacancies),
             elected: Vec::new(),
             excluded: Vec::new(),
@@ -83,15 +95,15 @@ impl CountEngine {
     }
 
     pub fn print_debug(&self, cd: &CandidateData) {
-        println!("-- CountEngine::print_debug (round {}) --", self.counts);
+        println!("-- CountEngine::print_debug (round {}) --", self.count_states.len());
         println!("Candidates: {}", self.candidates);
         println!("Total papers: {}", self.total_papers);
         println!("Quota: {}", self.quota);
         println!("Candidate totals:");
         let mut cbt: Vec<(&CandidateIndex, &CandidateBundleTransactions)> = self.candidate_bundle_transactions.iter().collect();
         cbt.sort_by(|a, b| a.0.cmp(b.0));
-        for (candidate_id, cbt) in cbt {
-            let a: u32 = cbt.total_votes();
+        for (candidate_id, cbts) in cbt {
+            let a: u32 = cbts.total_votes();
             println!("    {:?} {} votes for candidate {} ({})", candidate_id, a, cd.get_name(*candidate_id), cd.get_party(*candidate_id));
         }
         println!("Candidates elected: {:?}", self.elected);
@@ -132,20 +144,42 @@ impl CountEngine {
         self.elected.push(candidate);
     }
 
+    fn build_count_state(&self, votes_exhausted: u32, papers_exhausted: u32) -> CountState {
+        let mut vpc: HashMap<CandidateIndex, u32> = HashMap::new();
+        let mut ppc: HashMap<CandidateIndex, u32> = HashMap::new();
+        for (candidate_id, cbts) in self.candidate_bundle_transactions.iter() {
+            vpc.insert(*candidate_id, cbts.total_votes());
+            ppc.insert(*candidate_id, cbts.total_papers());
+        }
+        CountState {
+            votes_per_candidate: vpc,
+            papers_per_candidate: ppc,
+            papers_exhausted,
+            votes_exhausted
+        }
+    }
+
     pub fn count(&mut self) -> CountOutcome {
+        let votes_exhausted = 0;
+        let papers_exhausted = 0;
         // count votes, once (a single 'round')
-        self.counts += 1;
+
         // action execution to come
+
+        // determine count totals
+        let count_state = self.build_count_state(votes_exhausted, papers_exhausted);
+        self.count_states.push(count_state.clone());
 
         // has anyone been elected in this count?
         let newly_elected = self.determine_elected_candidates();
         for candidate in newly_elected {
             self.elect(candidate);
             if self.elected.len() as u32 == self.vacancies {
-                return CountOutcome::CountComplete(self.counts);
+                return CountOutcome::CountComplete(self.count_states.len(), count_state);
             }
         }
+        println!("state: {:?}", count_state);
         panic!("unreachable");
-        return CountOutcome::CountContinues(self.counts);
+        return CountOutcome::CountContinues(self.count_states.len(), count_state);
     }
 }
