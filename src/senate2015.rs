@@ -114,9 +114,11 @@ impl SenateCount {
         println!("Total papers: {}", self.total_papers);
         println!("Quota: {}", self.quota);
         println!("Candidate totals:");
-        for (candidate_id, cbt) in self.candidate_bundle_transactions.iter() {
+        let mut cbt: Vec<(&CandidateIndex, &CandidateBundleTransactions)> = self.candidate_bundle_transactions.iter().collect();
+        cbt.sort_by(|a, b| a.0.cmp(b.0));
+        for (candidate_id, cbt) in cbt {
             let a: u32 = cbt.total_votes();
-            println!("    {} votes for candidate {} ({})", a, cd.get_name(*candidate_id), cd.get_party(*candidate_id));
+            println!("    {:?} {} votes for candidate {} ({})", candidate_id, a, cd.get_name(*candidate_id), cd.get_party(*candidate_id));
         }
         println!("Candidates elected: {:?}", self.elected);
         println!("Candidates excluded: {:?}", self.excluded);
@@ -152,6 +154,7 @@ impl SenateCount {
         if self.elected.contains(&candidate) { 
             panic!("Candidate elected twice");
         }
+        println!("Elected candidate: {:?}", candidate);
         self.elected.push(candidate);
     }
 
@@ -193,6 +196,7 @@ fn run_state(state: &str, vacancies: u32) {
 
     let candidate_count = cd.count.clone();
     let mut count = SenateCount::new(vacancies, candidate_count as u32, ballot_states);
+    count.print_debug(&cd);
     while {
         let done = count.execute_count();
         count.print_debug(&cd);
