@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 use defs::*;
+use num::BigInt;
 use num::FromPrimitive;
 use num::rational::{Ratio};
 
@@ -7,6 +8,14 @@ use num::rational::{Ratio};
 pub enum CountOutcome {
     CountComplete(usize, CountState),
     CountContinues(usize, CountState)
+}
+
+#[derive(Debug,PartialEq,Eq,PartialOrd,Ord)]
+// these actions are in precedence order, low-to-high
+enum CountAction {
+    FirstCount,
+    ExclusionDistribution(CandidateIndex),
+    ElectionDistribution(CandidateIndex, Ratio<BigInt>),
 }
 
 #[derive(Debug, Clone)]
@@ -27,6 +36,7 @@ pub struct CountEngine {
     quota: u32,
     elected: Vec<CandidateIndex>,
     excluded: Vec<CandidateIndex>,
+    actions_pending: Vec<(CountAction, usize)>
 }
 
 // all bundle transactions held by a candidate, in a given round of the count
@@ -50,7 +60,6 @@ impl CandidateBundleTransactions {
         }
     }
 }
-
 
 impl CountEngine {
     fn determine_quota(total_papers: u32, vacancies: u32) -> u32 {
@@ -82,7 +91,7 @@ impl CountEngine {
             };
             t.bundle_transactions.push(bt);
         }
-        CountEngine {
+        let mut engine = CountEngine {
             candidates: candidates,
             vacancies: vacancies,
             candidate_bundle_transactions: ctbt,
@@ -91,7 +100,10 @@ impl CountEngine {
             quota: CountEngine::determine_quota(total_papers, vacancies),
             elected: Vec::new(),
             excluded: Vec::new(),
-        }
+            actions_pending: Vec::new(),
+        };
+        engine.push_action(CountAction::FirstCount);
+        engine
     }
 
     pub fn print_debug(&self, cd: &CandidateData) {
@@ -136,12 +148,38 @@ impl CountEngine {
         elected
     }
 
-    fn elect(&mut self, candidate: CandidateIndex) {
+    fn push_action(&mut self, action: CountAction) {
+        // we need to maintain the list of actions to perform in a precedence order,
+        // by type of action, and then the order in which they were added to the queue
+        // there's probably a more idiomatic Rust way to do this.
+        let offset = self.actions_pending.len();
+        println!("Action pushed: {:?}", action);
+        self.actions_pending.push((action, offset));
+        self.actions_pending.sort();
+        self.actions_pending.reverse();
+        println!("Actions pending: {:?}", self.actions_pending);
+    }
+
+    fn pop_action(&mut self) -> CountAction {
+        let (action, _) = self.actions_pending.pop().unwrap();
+        action
+    }
+
+    fn elect(&mut self, candidate: CandidateIndex, state: &CountState) {
         if self.elected.contains(&candidate) { 
             panic!("Candidate elected twice");
         }
         println!("Elected candidate: {:?}", candidate);
         self.elected.push(candidate);
+        let candidate_votes = *state.votes_per_candidate.get(&candidate).unwrap();
+        let candidate_papers = *state.papers_per_candidate.get(&candidate).unwrap();
+        let excess_votes = if candidate_votes > self.quota {
+            candidate_votes - self.quota
+        } else {
+            0
+        };
+        let transfer_value = Ratio::from_integer(FromPrimitive::from_u32(excess_votes).unwrap()) / Ratio::from_integer(FromPrimitive::from_u32(candidate_papers).unwrap());
+        self.push_action(CountAction::ElectionDistribution(candidate, transfer_value));
     }
 
     fn build_count_state(&self, votes_exhausted: u32, papers_exhausted: u32) -> CountState {
@@ -162,7 +200,17 @@ impl CountEngine {
     pub fn count(&mut self) -> CountOutcome {
         let votes_exhausted = 0;
         let papers_exhausted = 0;
+
         // count votes, once (a single 'round')
+        match self.pop_action() {
+            CountAction::FirstCount => {
+                // we don't need to do anything on the first count
+            },
+            CountAction::ExclusionDistribution(candidate) => {
+            }
+            CountAction::ElectionDistribution(candidate, transfer_value) => {
+            }
+        }
 
         // action execution to come
 
@@ -173,13 +221,11 @@ impl CountEngine {
         // has anyone been elected in this count?
         let newly_elected = self.determine_elected_candidates();
         for candidate in newly_elected {
-            self.elect(candidate);
+            self.elect(candidate, &count_state);
             if self.elected.len() as u32 == self.vacancies {
                 return CountOutcome::CountComplete(self.count_states.len(), count_state);
             }
         }
-        println!("state: {:?}", count_state);
-        panic!("unreachable");
         return CountOutcome::CountContinues(self.count_states.len(), count_state);
     }
 }
