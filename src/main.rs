@@ -4,6 +4,7 @@ extern crate rayon;
 extern crate num;
 
 mod aec;
+mod engine;
 mod defs;
 mod senate2015;
 
