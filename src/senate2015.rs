@@ -2,6 +2,7 @@ use defs::*;
 use engine::*;
 use aec;
 use std::ascii::AsciiExt;
+use std::collections::{VecDeque};
 
 fn load_candidate_data(candidates: Vec<aec::data::candidates::AECAllCandidateRow>) -> CandidateData {
     let mut names = Vec::new();
@@ -54,7 +55,9 @@ fn run_state(state: &str, vacancies: u32) {
 
     println!("{} unique bundle states at commencement of count.", ballot_states.len());
 
-    let mut engine = CountEngine::new(vacancies, cd, ballot_states);
+    let mut automation = VecDeque::new();
+    automation.push_back(0);
+    let mut engine = CountEngine::new(vacancies, cd, ballot_states, automation);
     while {
         let outcome = engine.count();
         match outcome {

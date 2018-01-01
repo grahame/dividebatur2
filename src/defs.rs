@@ -66,7 +66,7 @@ pub struct CandidateData {
 impl CandidateData {
     pub fn vec_names(&self, candidates: &Vec<CandidateIndex>) -> String {
         let names: Vec<String> = candidates.iter().map(|c| self.get_name(*c)).collect();
-        names.join(", ")
+        names.join("; ")
     }
     pub fn hashset_names(&self, candidate_set: &HashSet<CandidateIndex>) -> String {
         let mut candidates: Vec<CandidateIndex> = Vec::new();

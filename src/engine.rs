@@ -42,6 +42,7 @@ pub struct CountEngine {
     elected: HashSet<CandidateIndex>,
     excluded: HashSet<CandidateIndex>,
     actions_pending: VecDeque<CountAction>,
+    automation: VecDeque<usize>,
 }
 
 // all bundle transactions held by a candidate, in a given round of the count
@@ -133,14 +134,14 @@ impl CountEngine {
         }
     }
 
-
-    pub fn new(vacancies: u32, candidates: CandidateData, ballot_states: Vec<BallotState>) -> CountEngine {
+    pub fn new(vacancies: u32, candidates: CandidateData, ballot_states: Vec<BallotState>, automation: VecDeque<usize>) -> CountEngine {
         let total_papers = ballot_states.iter().map(|bs| bs.count).sum();
         let mut engine = CountEngine {
-            candidates: candidates,
-            vacancies: vacancies,
+            candidates,
+            vacancies,
+            automation,
+            total_papers,
             candidate_bundle_transactions: HashMap::new(),
-            total_papers: total_papers,
             count_states: Vec::new(),
             quota: CountEngine::determine_quota(total_papers, vacancies),
             elected: HashSet::new(),
@@ -256,6 +257,26 @@ impl CountEngine {
         self.distribute_bundle_transactions(&mut bundles_to_distribute, transfer_value);
     }
 
+    fn find_tie_breaker(&self, candidates: &Vec<CandidateIndex>) -> Option<Vec<(CandidateIndex)>> {
+        // look back through previous counts, looking for a round where the votes of each of the candidates
+        // are distinct. if found, returns the candidates in ascending vote order
+        for (idx, count_state) in self.count_states.iter().enumerate().rev().skip(1) {
+            let mut candidate_votes = Vec::new();
+            let mut vote_set = HashSet::new();
+            for candidate in candidates {
+                let votes = count_state.votes_per_candidate.get(candidate).unwrap();
+                candidate_votes.push((*candidate, *votes));
+                vote_set.insert(votes);
+            }
+            if vote_set.len() == candidates.len() {
+                println!("find tie breaker: match found in round {}", idx);
+                candidate_votes.sort_by_key(|&(c, v)| v);
+                return Some(candidate_votes.drain(..).map(|(c,v)| c).collect())
+            }
+        }
+        None
+    }
+
     fn exclude_a_candidate(&mut self, count_state: &CountState) {
         let mut votes_eligible_candidate = Vec::new();
         for (candidate, votes) in count_state.votes_per_candidate.iter() {
@@ -264,6 +285,7 @@ impl CountEngine {
             }
             votes_eligible_candidate.push((candidate.clone(), votes.clone()));
         }
+        assert!(votes_eligible_candidate.len() > 0);
         let min_votes = votes_eligible_candidate.iter().map(|&(_, v)| v).min().unwrap();
         let exclusion_candidates: Vec<CandidateIndex> = votes_eligible_candidate.drain(..).filter(|&(_, v)| v == min_votes).map(|(c, _)| c).collect();
 
@@ -273,7 +295,15 @@ impl CountEngine {
         } else if possibilities == 1 {
             exclusion_candidates[0]
         } else {
-            panic!("TODO - tie break exclusions");
+            match self.find_tie_breaker(&exclusion_candidates) {
+                Some(tie_broken_candidates) => {
+                    tie_broken_candidates[0]
+                }
+                None => {
+                    let auto = self.automation.pop_front().unwrap();
+                    exclusion_candidates[auto]
+                }
+            }
         };
         println!("exclude_a_candidate: {}", self.candidates.vec_names(&exclusion_candidates));
 
@@ -294,6 +324,9 @@ impl CountEngine {
     }
 
     pub fn count(&mut self) -> CountOutcome {
+        println!("-- START ROUND {} --", self.count_states.len() + 1);
+        println!();
+
         let votes_exhausted = 0;
         let papers_exhausted = 0;
 
