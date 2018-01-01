@@ -1,4 +1,4 @@
-use std::collections::{HashMap,VecDeque};
+use std::collections::{HashMap,VecDeque,HashSet};
 use defs::*;
 use num::BigInt;
 use num::{FromPrimitive,ToPrimitive};
@@ -14,7 +14,7 @@ pub enum CountOutcome {
 #[derive(Debug, Clone)]
 enum CountAction {
     FirstCount,
-    ExclusionDistribution(CandidateIndex),
+    ExclusionDistribution(CandidateIndex, Ratio<BigInt>),
     ElectionDistribution(CandidateIndex, Ratio<BigInt>),
 }
 
@@ -238,6 +238,35 @@ impl CountEngine {
         self.distribute_bundle_transactions(&mut bundles_to_distribute, transfer_value);
     }
 
+    fn exclude_a_candidate(&mut self, count_state: &CountState) {
+        let min_votes = *(count_state.votes_per_candidate.values().min().unwrap());
+        let exclusion_candidates: Vec<CandidateIndex> = count_state.votes_per_candidate.iter().filter(|entry| *(entry.1) == min_votes).map(|entry| *(entry.0)).collect();
+        let possibilities = exclusion_candidates.len();
+        let to_exclude = if possibilities == 0 {
+            panic!("No candidates left for exclusion, yet we're trying to exclude");
+        } else if possibilities == 1 {
+            exclusion_candidates[0]
+        } else {
+            panic!("TODO - tie break exclusions");
+        };
+        println!("exclude_a_candidate: {}", self.candidates.vec_names(&exclusion_candidates));
+
+        self.excluded.push(to_exclude);
+        let mut transfer_values = HashSet::new();
+        {
+            let bundle_transactions = &self.candidate_bundle_transactions.get(&to_exclude).unwrap().bundle_transactions;
+            for bundle_transaction in bundle_transactions.iter() {
+                transfer_values.insert(bundle_transaction.transfer_value.clone());
+            }
+        }
+        let mut transfer_values: Vec<Ratio<BigInt>> = transfer_values.drain().collect();
+        transfer_values.sort();
+        transfer_values.reverse();
+        for transfer_value in transfer_values {
+            self.push_action(CountAction::ExclusionDistribution(to_exclude, transfer_value));
+        }
+    }
+
     pub fn count(&mut self) -> CountOutcome {
         let votes_exhausted = 0;
         let papers_exhausted = 0;
@@ -249,8 +278,8 @@ impl CountEngine {
                 // we don't need to do anything on the first count
                 println!("Action: first count");
             },
-            CountAction::ExclusionDistribution(candidate) => {
-                println!("Action: exclusion distribution of candidate {}", self.candidates.vec_names(&vec![candidate]));
+            CountAction::ExclusionDistribution(candidate, transfer_value) => {
+                println!("Action: exclusion distribution of papers from candidate {} with transfer value {}", self.candidates.vec_names(&vec![candidate]), transfer_value);
             }
             CountAction::ElectionDistribution(candidate, transfer_value) => {
                 println!("Action: election distribution of candidate {}", self.candidates.vec_names(&vec![candidate]));
@@ -258,8 +287,6 @@ impl CountEngine {
                 self.process_election_distribution(candidate, transfer_value, &last_state);
             }
         }
-
-        // action execution to come
 
         // determine count totals
         let count_state = self.build_count_state(votes_exhausted, papers_exhausted);
@@ -273,6 +300,13 @@ impl CountEngine {
                 return CountOutcome::CountComplete(self.count_states.len(), count_state);
             }
         }
+
+        // if we don't have anything pending (exclusion or election), then it's
+        // time to exclude a candidate
+        if self.actions_pending.len() == 0 {
+            self.exclude_a_candidate(&count_state);
+        }
+
         return CountOutcome::CountContinues(self.count_states.len(), count_state);
     }
 }
