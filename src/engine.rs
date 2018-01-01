@@ -159,10 +159,10 @@ impl CountEngine {
         println!("Total papers: {}", self.total_papers);
         println!("Quota: {}", self.quota);
         println!("Candidate totals:");
-        let mut cbt: Vec<(&CandidateIndex, u32)> = self.candidate_bundle_transactions.iter().map(|a| (a.0, a.1.total_votes())).collect();
+        let mut cbt: Vec<(&CandidateIndex, (u32, u32))> = self.candidate_bundle_transactions.iter().map(|a| (a.0, (a.1.total_votes(), a.1.total_papers()))).collect();
         cbt.sort_by(|a, b| b.1.cmp(&a.1));
-        for (candidate_id, votes) in cbt {
-            println!("    {} votes for candidate {} ({})", votes, self.candidates.get_name(*candidate_id), self.candidates.get_party(*candidate_id));
+        for (candidate_id, (votes, papers) ) in cbt {
+            println!("    {} votes for candidate {} ({}) [{} papers]", votes, self.candidates.get_name(*candidate_id), self.candidates.get_party(*candidate_id), papers);
         }
         println!("Candidates elected: {}", self.candidates.hashset_names(&self.elected));
         println!("Candidates excluded: {}", self.candidates.hashset_names(&self.excluded));
@@ -233,8 +233,26 @@ impl CountEngine {
         }
     }
 
-    fn process_election_distribution(&mut self, candidate: CandidateIndex, transfer_value: Ratio<BigInt>, cs: &CountState) {
+    fn process_election_distribution(&mut self, candidate: CandidateIndex, transfer_value: Ratio<BigInt>) {
         let mut bundles_to_distribute = self.candidate_bundle_transactions.remove(&candidate).unwrap().bundle_transactions;
+        self.distribute_bundle_transactions(&mut bundles_to_distribute, transfer_value);
+    }
+
+    fn process_exclusion_distribution(&mut self, candidate: CandidateIndex, transfer_value: Ratio<BigInt>) {
+        let current_bundles = self.candidate_bundle_transactions.remove(&candidate).unwrap().bundle_transactions;
+        let mut bundles_to_distribute = Vec::new();
+        let mut bundles_to_hold = Vec::new();
+        for bundle in current_bundles {
+            if bundle.transfer_value == transfer_value {
+                bundles_to_distribute.push(bundle);
+            } else {
+                bundles_to_hold.push(bundle);
+            }
+        }
+        // put the remaining bundles, if any, back in
+        if bundles_to_hold.len() > 0 {
+            self.candidate_bundle_transactions.insert(candidate, CandidateBundleTransactions { bundle_transactions: bundles_to_hold });
+        }
         self.distribute_bundle_transactions(&mut bundles_to_distribute, transfer_value);
     }
 
@@ -288,11 +306,11 @@ impl CountEngine {
             },
             CountAction::ExclusionDistribution(candidate, transfer_value) => {
                 println!("Action: exclusion distribution of papers from candidate {} with transfer value {}", self.candidates.vec_names(&vec![candidate]), transfer_value);
+                self.process_exclusion_distribution(candidate, transfer_value);
             }
             CountAction::ElectionDistribution(candidate, transfer_value) => {
                 println!("Action: election distribution of candidate {}", self.candidates.vec_names(&vec![candidate]));
-                let last_state = self.count_states[self.count_states.len() - 1].clone();
-                self.process_election_distribution(candidate, transfer_value, &last_state);
+                self.process_election_distribution(candidate, transfer_value);
             }
         }
 
