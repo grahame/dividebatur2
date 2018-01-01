@@ -3,7 +3,6 @@
  */
 
 use num::rational::{BigRational};
-use std::collections::{HashSet};
 
 // represents a candidate's index on the ballot paper
 // ranges from 0..N-1 where N is the number of candidates
@@ -67,13 +66,6 @@ impl CandidateData {
     pub fn vec_names(&self, candidates: &Vec<CandidateIndex>) -> String {
         let names: Vec<String> = candidates.iter().map(|c| self.get_name(*c)).collect();
         names.join("; ")
-    }
-    pub fn hashset_names(&self, candidate_set: &HashSet<CandidateIndex>) -> String {
-        let mut candidates: Vec<CandidateIndex> = Vec::new();
-        for candidate in candidate_set {
-            candidates.push(candidate.clone());
-        }
-        self.vec_names(&candidates)
     }
 }
 

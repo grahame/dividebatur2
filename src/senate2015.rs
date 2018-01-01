@@ -76,5 +76,5 @@ fn run_state(state: &str, vacancies: u32) {
 }
 
 pub fn run() {
-    run_state("WA", 12);
+    run_state("NSW", 12);
 }

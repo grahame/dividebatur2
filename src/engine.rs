@@ -156,6 +156,7 @@ impl CountEngine {
     }
 
 
+    #[allow(dead_code)]
     pub fn print_debug(&self) {
         println!("-- CountEngine::print_debug (round {}) --", self.count_states.len());
         println!("Candidates: {}", self.candidates.count);
