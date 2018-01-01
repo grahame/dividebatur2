@@ -107,11 +107,22 @@ impl CountEngine {
 
         for bundle_transaction in bundle_transactions {
             for mut ballot_state in bundle_transaction.ballot_states.drain(..) {
-                if ballot_state.to_next_preference() {
-                    ballot_states.push(ballot_state);
-                } else {
-                    papers_exhausted += 1;
-                }
+                loop {
+                    match ballot_state.to_next_preference() {
+                        Some(candidate) => {
+                            if self.elected.contains(&candidate) || self.excluded.contains(&candidate) {
+                                continue;
+                            } else {
+                                ballot_states.push(ballot_state);
+                                break;
+                            }
+                        },
+                        None => {
+                            papers_exhausted += 1;
+                            break;
+                        }
+                    };
+                };
             }
         }
         let votes_exhausted = CountEngine::apply_transfer_value(&transfer_value, papers_exhausted);
@@ -140,6 +151,7 @@ impl CountEngine {
         engine.push_action(CountAction::FirstCount);
         engine
     }
+
 
     pub fn print_debug(&self) {
         println!("-- CountEngine::print_debug (round {}) --", self.count_states.len());

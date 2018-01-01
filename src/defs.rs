@@ -37,9 +37,9 @@ impl BallotState {
         }
     }
 
-    pub fn to_next_preference(&mut self) -> bool {
+    pub fn to_next_preference(&mut self) -> Option<CandidateIndex> {
         self.active_preference += 1;
-        return self.alive()
+        return self.current_preference();
     }
 }
 
