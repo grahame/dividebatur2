@@ -39,8 +39,9 @@ pub struct CountEngine {
     total_papers: u32,
     count_states: Vec<CountState>,
     quota: u32,
-    elected: HashSet<CandidateIndex>,
-    excluded: HashSet<CandidateIndex>,
+    elected: Vec<CandidateIndex>,
+    excluded: Vec<CandidateIndex>,
+    inactive: HashSet<CandidateIndex>, // either elected or excluded; fast lookup
     actions_pending: VecDeque<CountAction>,
     automation: VecDeque<usize>,
 }
@@ -144,8 +145,9 @@ impl CountEngine {
             candidate_bundle_transactions: HashMap::new(),
             count_states: Vec::new(),
             quota: CountEngine::determine_quota(total_papers, vacancies),
-            elected: HashSet::new(),
-            excluded: HashSet::new(),
+            inactive: HashSet::new(),
+            elected: Vec::new(),
+            excluded: Vec::new(),
             actions_pending: VecDeque::new(),
         };
         engine.bundle_ballot_states(ballot_states, Ratio::from_integer(FromPrimitive::from_u32(1).unwrap()));
@@ -165,8 +167,8 @@ impl CountEngine {
         for (candidate_id, (votes, papers) ) in cbt {
             println!("    {} votes for candidate {} ({}) [{} papers]", votes, self.candidates.get_name(*candidate_id), self.candidates.get_party(*candidate_id), papers);
         }
-        println!("Candidates elected: {}", self.candidates.hashset_names(&self.elected));
-        println!("Candidates excluded: {}", self.candidates.hashset_names(&self.excluded));
+        println!("Candidates elected: {}", self.candidates.vec_names(&self.elected));
+        println!("Candidates excluded: {}", self.candidates.vec_names(&self.excluded));
     }
 
     fn determine_elected_candidates(&mut self) -> Vec<CandidateIndex> {
@@ -207,7 +209,8 @@ impl CountEngine {
             panic!("Candidate elected twice");
         }
         println!("Elected candidate: {}", self.candidates.vec_names(&vec![candidate]));
-        self.elected.insert(candidate);
+        self.elected.push(candidate);
+        self.inactive.insert(candidate);
         let candidate_votes = *state.votes_per_candidate.get(&candidate).unwrap();
         let candidate_papers = *state.papers_per_candidate.get(&candidate).unwrap();
         let excess_votes = if candidate_votes > self.quota {
@@ -270,8 +273,8 @@ impl CountEngine {
             }
             if vote_set.len() == candidates.len() {
                 println!("find tie breaker: match found in round {}", idx);
-                candidate_votes.sort_by_key(|&(c, v)| v);
-                return Some(candidate_votes.drain(..).map(|(c,v)| c).collect())
+                candidate_votes.sort_by_key(|&(_, v)| v);
+                return Some(candidate_votes.drain(..).map(|(c,_)| c).collect())
             }
         }
         None
@@ -307,7 +310,9 @@ impl CountEngine {
         };
         println!("exclude_a_candidate: {}", self.candidates.vec_names(&exclusion_candidates));
 
-        self.excluded.insert(to_exclude);
+        self.excluded.push(to_exclude);
+        self.inactive.insert(to_exclude);
+
         let mut transfer_values = HashSet::new();
         {
             let bundle_transactions = &self.candidate_bundle_transactions.get(&to_exclude).unwrap().bundle_transactions;
@@ -357,6 +362,32 @@ impl CountEngine {
             self.elect(candidate, &count_state);
             if self.elected.len() as u32 == self.vacancies {
                 return CountOutcome::CountComplete(self.count_states.len(), count_state);
+            }
+        }
+
+        // are we done? check the various termination procedures from the Act
+        if self.actions_pending.len() == 0 {
+            let mut continuing_candidates: Vec<CandidateIndex> = count_state.votes_per_candidate.keys().filter(|c| !self.elected.contains(c) && !self.excluded.contains(c)).map(|c| *c).collect();
+            continuing_candidates.sort_by_key(|c| count_state.votes_per_candidate.get(c).unwrap());
+            let remaining_vacancies = self.vacancies as usize - self.elected.len();
+            // section 273(18); if we're down to N candidates in the running, with N vacancies, the remaining candidates are elected
+            if continuing_candidates.len() == remaining_vacancies {
+                for candidate in continuing_candidates.iter().rev() {
+                    self.elect(*candidate, &count_state);
+                }
+                return CountOutcome::CountComplete(self.count_states.len(), count_state);
+            }
+            // section 273(17); if we're down to two candidates in the running, the candidate with the highest number of votes wins - even
+            // if they don't have a quota
+            if continuing_candidates.len() == 2 {
+                let a = continuing_candidates[0];
+                let b = continuing_candidates[1];
+                if count_state.votes_per_candidate.get(&a).unwrap() == count_state.votes_per_candidate.get(&b).unwrap() {
+                    panic!("Must manually choose for tie on last spot.");
+                } else {
+                    self.elect(b, &count_state);
+                    return CountOutcome::CountComplete(self.count_states.len(), count_state);
+                }
             }
         }
 

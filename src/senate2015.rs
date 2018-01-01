@@ -62,13 +62,13 @@ fn run_state(state: &str, vacancies: u32) {
         let outcome = engine.count();
         match outcome {
             CountOutcome::CountComplete(nrounds, state) => {
-                engine.print_debug();
+                // engine.print_debug();
                 println!("{:?}", state);
                 println!("Election complete after {} rounds of counting.", nrounds);
                 false
             }
             CountOutcome::CountContinues(_, _) => {
-                engine.print_debug();
+                // engine.print_debug();
                 true
             }
         }
@@ -76,5 +76,5 @@ fn run_state(state: &str, vacancies: u32) {
 }
 
 pub fn run() {
-    run_state("TAS", 12);
+    run_state("WA", 12);
 }
