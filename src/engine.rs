@@ -39,8 +39,8 @@ pub struct CountEngine {
     total_papers: u32,
     count_states: Vec<CountState>,
     quota: u32,
-    elected: Vec<CandidateIndex>,
-    excluded: Vec<CandidateIndex>,
+    elected: HashSet<CandidateIndex>,
+    excluded: HashSet<CandidateIndex>,
     actions_pending: VecDeque<CountAction>,
 }
 
@@ -143,8 +143,8 @@ impl CountEngine {
             total_papers: total_papers,
             count_states: Vec::new(),
             quota: CountEngine::determine_quota(total_papers, vacancies),
-            elected: Vec::new(),
-            excluded: Vec::new(),
+            elected: HashSet::new(),
+            excluded: HashSet::new(),
             actions_pending: VecDeque::new(),
         };
         engine.bundle_ballot_states(ballot_states, Ratio::from_integer(FromPrimitive::from_u32(1).unwrap()));
@@ -164,8 +164,8 @@ impl CountEngine {
         for (candidate_id, votes) in cbt {
             println!("    {} votes for candidate {} ({})", votes, self.candidates.get_name(*candidate_id), self.candidates.get_party(*candidate_id));
         }
-        println!("Candidates elected: {}", self.candidates.vec_names(&self.elected));
-        println!("Candidates excluded: {}", self.candidates.vec_names(&self.excluded));
+        println!("Candidates elected: {}", self.candidates.hashset_names(&self.elected));
+        println!("Candidates excluded: {}", self.candidates.hashset_names(&self.excluded));
     }
 
     fn determine_elected_candidates(&mut self) -> Vec<CandidateIndex> {
@@ -206,7 +206,7 @@ impl CountEngine {
             panic!("Candidate elected twice");
         }
         println!("Elected candidate: {}", self.candidates.vec_names(&vec![candidate]));
-        self.elected.push(candidate);
+        self.elected.insert(candidate);
         let candidate_votes = *state.votes_per_candidate.get(&candidate).unwrap();
         let candidate_papers = *state.papers_per_candidate.get(&candidate).unwrap();
         let excess_votes = if candidate_votes > self.quota {
@@ -239,8 +239,16 @@ impl CountEngine {
     }
 
     fn exclude_a_candidate(&mut self, count_state: &CountState) {
-        let min_votes = *(count_state.votes_per_candidate.values().min().unwrap());
-        let exclusion_candidates: Vec<CandidateIndex> = count_state.votes_per_candidate.iter().filter(|entry| *(entry.1) == min_votes).map(|entry| *(entry.0)).collect();
+        let mut votes_eligible_candidate = Vec::new();
+        for (candidate, votes) in count_state.votes_per_candidate.iter() {
+            if self.elected.contains(&candidate) || self.excluded.contains(&candidate) {
+                continue;
+            }
+            votes_eligible_candidate.push((candidate.clone(), votes.clone()));
+        }
+        let min_votes = votes_eligible_candidate.iter().map(|&(_, v)| v).min().unwrap();
+        let exclusion_candidates: Vec<CandidateIndex> = votes_eligible_candidate.drain(..).filter(|&(_, v)| v == min_votes).map(|(c, _)| c).collect();
+
         let possibilities = exclusion_candidates.len();
         let to_exclude = if possibilities == 0 {
             panic!("No candidates left for exclusion, yet we're trying to exclude");
@@ -251,7 +259,7 @@ impl CountEngine {
         };
         println!("exclude_a_candidate: {}", self.candidates.vec_names(&exclusion_candidates));
 
-        self.excluded.push(to_exclude);
+        self.excluded.insert(to_exclude);
         let mut transfer_values = HashSet::new();
         {
             let bundle_transactions = &self.candidate_bundle_transactions.get(&to_exclude).unwrap().bundle_transactions;
