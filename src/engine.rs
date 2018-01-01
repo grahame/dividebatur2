@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::{HashMap,VecDeque};
 use defs::*;
 use num::BigInt;
 use num::{FromPrimitive,ToPrimitive};
@@ -10,8 +10,8 @@ pub enum CountOutcome {
     CountContinues(usize, CountState)
 }
 
-#[derive(Debug,PartialEq,Eq,PartialOrd,Ord)]
 // these actions are in precedence order, low-to-high
+#[derive(Debug, Clone)]
 enum CountAction {
     FirstCount,
     ExclusionDistribution(CandidateIndex),
@@ -41,7 +41,7 @@ pub struct CountEngine {
     quota: u32,
     elected: Vec<CandidateIndex>,
     excluded: Vec<CandidateIndex>,
-    actions_pending: Vec<(CountAction, usize)>
+    actions_pending: VecDeque<CountAction>,
 }
 
 // all bundle transactions held by a candidate, in a given round of the count
@@ -134,7 +134,7 @@ impl CountEngine {
             quota: CountEngine::determine_quota(total_papers, vacancies),
             elected: Vec::new(),
             excluded: Vec::new(),
-            actions_pending: Vec::new(),
+            actions_pending: VecDeque::new(),
         };
         engine.bundle_ballot_states(ballot_states, Ratio::from_integer(FromPrimitive::from_u32(1).unwrap()));
         engine.push_action(CountAction::FirstCount);
@@ -186,27 +186,7 @@ impl CountEngine {
     }
 
     fn push_action(&mut self, action: CountAction) {
-        // we need to maintain the list of actions to perform in a precedence order,
-        // by type of action, and then the order in which they were added to the queue
-        // there's probably a more idiomatic Rust way to do this.
-        let offset = self.actions_pending.len();
-        println!("Action pushed: {:?}", action);
-        self.actions_pending.push((action, offset));
-        self.actions_pending.sort();
-        self.actions_pending.reverse();
-        println!("Actions pending: {:?}", self.actions_pending);
-    }
-
-    fn pop_action(&mut self) -> CountAction {
-        match self.actions_pending.pop() {
-            Some(a) => {
-                let (action, _) = a;
-                action
-            }
-            None => {
-                panic!("Ran out of actions - unreachable.");
-            }
-        }
+        self.actions_pending.push_back(action);
     }
 
     fn elect(&mut self, candidate: CandidateIndex, state: &CountState) {
@@ -251,15 +231,17 @@ impl CountEngine {
         let papers_exhausted = 0;
 
         // count votes, once (a single 'round')
-        let action = self.pop_action();
-        println!("Action is: {:?}", action);
+        let action = self.actions_pending.pop_front().unwrap();
         match action {
             CountAction::FirstCount => {
                 // we don't need to do anything on the first count
+                println!("Action: first count");
             },
             CountAction::ExclusionDistribution(candidate) => {
+                println!("Action: exclusion distribution of candidate {}", self.candidates.vec_names(&vec![candidate]));
             }
             CountAction::ElectionDistribution(candidate, transfer_value) => {
+                println!("Action: election distribution of candidate {}", self.candidates.vec_names(&vec![candidate]));
                 let last_state = self.count_states[self.count_states.len() - 1].clone();
                 self.process_election_distribution(candidate, transfer_value, &last_state);
             }

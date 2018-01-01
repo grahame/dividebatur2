@@ -57,7 +57,6 @@ fn run_state(state: &str, vacancies: u32) {
     let mut engine = CountEngine::new(vacancies, cd, ballot_states);
     while {
         let outcome = engine.count();
-        engine.print_debug();
         match outcome {
             CountOutcome::CountComplete(nrounds, state) => {
                 engine.print_debug();
