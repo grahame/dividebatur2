@@ -11,10 +11,9 @@ use std::collections::HashMap;
 use rayon::prelude::*;
 use defs::*;
 
-#[derive(Debug,Deserialize)]
+#[derive(Debug, Deserialize)]
 struct AECFormalPreferencesRow {
-    #[serde(rename = "Preferences")]
-    preferences: String,
+    #[serde(rename = "Preferences")] preferences: String,
 }
 
 // a voter's numerical preference for a candidate
@@ -31,12 +30,13 @@ fn parse_preferences(raw_preferences: &String, candidates: &CandidateData) -> Ve
     let ticket_count = candidates.tickets.len();
 
     let mut atl_buf: Vec<(GroupPreference, GroupIndex)> = Vec::with_capacity(ticket_count);
-    let mut btl_buf: Vec<(CandidatePreference, CandidateIndex)> = Vec::with_capacity(candidates.count);
+    let mut btl_buf: Vec<(CandidatePreference, CandidateIndex)> =
+        Vec::with_capacity(candidates.count);
     let mut form_buf: Vec<CandidateIndex> = Vec::with_capacity(candidates.count);
 
     for (pref_idx, pref_str) in raw_preferences.split(",").enumerate() {
         let pref_v: u8 = if pref_str == "" {
-            continue
+            continue;
         } else if pref_str == "*" || pref_str == "/" {
             1
         } else {
@@ -46,7 +46,10 @@ fn parse_preferences(raw_preferences: &String, candidates: &CandidateData) -> Ve
         if pref_idx < ticket_count {
             atl_buf.push((GroupPreference(pref_v), GroupIndex(pref_idx as u8)));
         } else {
-            btl_buf.push((CandidatePreference(pref_v), CandidateIndex((pref_idx - ticket_count) as u8)));
+            btl_buf.push((
+                CandidatePreference(pref_v),
+                CandidateIndex((pref_idx - ticket_count) as u8),
+            ));
         }
     }
 
@@ -109,7 +112,9 @@ pub fn load(filename: &str, candidates: &CandidateData) -> Result<Vec<BallotStat
     let mut work_buf = Vec::new();
 
     let process = |w: &mut Vec<String>, r: &mut HashMap<Vec<CandidateIndex>, u32>| {
-        let partial: Vec<Vec<CandidateIndex>> = w.par_iter().map(|p| parse_preferences(p, candidates)).collect();
+        let partial: Vec<Vec<CandidateIndex>> = w.par_iter()
+            .map(|p| parse_preferences(p, candidates))
+            .collect();
         for form in partial.iter() {
             let counter = r.entry(form.clone()).or_insert(0);
             *counter += 1;
@@ -131,11 +136,13 @@ pub fn load(filename: &str, candidates: &CandidateData) -> Result<Vec<BallotStat
     }
     process(&mut work_buf, &mut keys);
 
-    let r = keys.drain().map(|(form, count)| BallotState {
-        form,
-        count,
-        active_preference: 0
-    }).collect();
+    let r = keys.drain()
+        .map(|(form, count)| BallotState {
+            form,
+            count,
+            active_preference: 0,
+        })
+        .collect();
     Ok(r)
 }
 
@@ -149,10 +156,18 @@ mod tests {
             count: 19,
             names: vec![],
             parties: vec![],
-            tickets: vec![vec![CandidateIndex(0), CandidateIndex(1)], vec![CandidateIndex(2), CandidateIndex(3)], vec![CandidateIndex(4), CandidateIndex(5)], vec![CandidateIndex(6), CandidateIndex(7)], vec![CandidateIndex(8), CandidateIndex(9)], vec![CandidateIndex(10), CandidateIndex(11)], vec![CandidateIndex(12), CandidateIndex(13)]]
+            tickets: vec![
+                vec![CandidateIndex(0), CandidateIndex(1)],
+                vec![CandidateIndex(2), CandidateIndex(3)],
+                vec![CandidateIndex(4), CandidateIndex(5)],
+                vec![CandidateIndex(6), CandidateIndex(7)],
+                vec![CandidateIndex(8), CandidateIndex(9)],
+                vec![CandidateIndex(10), CandidateIndex(11)],
+                vec![CandidateIndex(12), CandidateIndex(13)],
+            ],
         };
         let line = String::from("5,7,3,4,1,2,6,5,6,11,12,3,4,9,10,1,2,2,3,7,8,,,,,");
-        let a  = parse_preferences(&line, &cd);
+        let a = parse_preferences(&line, &cd);
         println!("{:?}", a);
     }
 }

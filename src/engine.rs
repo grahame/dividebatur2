@@ -1,13 +1,13 @@
-use std::collections::{HashMap,VecDeque,HashSet};
+use std::collections::{HashMap, HashSet, VecDeque};
 use defs::*;
 use num::BigInt;
-use num::{FromPrimitive,ToPrimitive};
-use num::rational::{Ratio};
+use num::{FromPrimitive, ToPrimitive};
+use num::rational::Ratio;
 
 #[derive(Debug)]
 pub enum CountOutcome {
     CountComplete(usize, CountState),
-    CountContinues(usize, CountState)
+    CountContinues(usize, CountState),
 }
 
 // these actions are in precedence order, low-to-high
@@ -48,7 +48,7 @@ pub struct CountEngine {
 
 // all bundle transactions held by a candidate, in a given round of the count
 struct CandidateBundleTransactions {
-    bundle_transactions: Vec<BundleTransaction>
+    bundle_transactions: Vec<BundleTransaction>,
 }
 
 type CandidateToBundleTransactions = HashMap<CandidateIndex, CandidateBundleTransactions>;
@@ -62,7 +62,7 @@ impl CandidateBundleTransactions {
     }
     fn new() -> CandidateBundleTransactions {
         CandidateBundleTransactions {
-            bundle_transactions: Vec::new()
+            bundle_transactions: Vec::new(),
         }
     }
 }
@@ -79,30 +79,40 @@ impl CountEngine {
         out
     }
 
-    fn bundle_ballot_states(&mut self, ballot_states: Vec<BallotState>, transfer_value: Ratio<BigInt>) {
+    fn bundle_ballot_states(
+        &mut self,
+        ballot_states: Vec<BallotState>,
+        transfer_value: Ratio<BigInt>,
+    ) {
         let mut by_candidate: HashMap<CandidateIndex, Vec<BallotState>> = HashMap::new();
         for ballot_state in ballot_states.into_iter() {
             let candidate_id = match ballot_state.current_preference() {
                 Some(p) => p,
-                None => panic!("informal ballot in initial ballots")
+                None => panic!("informal ballot in initial ballots"),
             };
             let v = by_candidate.entry(candidate_id).or_insert(Vec::new());
             v.push(ballot_state);
         }
         for (candidate_id, ballot_states) in by_candidate.drain() {
-            let t = self.candidate_bundle_transactions.entry(candidate_id).or_insert(CandidateBundleTransactions::new());
+            let t = self.candidate_bundle_transactions
+                .entry(candidate_id)
+                .or_insert(CandidateBundleTransactions::new());
             let papers = ballot_states.iter().map(|bs| bs.count).sum();
             let bt = BundleTransaction {
                 ballot_states: ballot_states,
                 transfer_value: transfer_value.clone(),
                 papers: papers,
-                votes: CountEngine::apply_transfer_value(&transfer_value, papers)
+                votes: CountEngine::apply_transfer_value(&transfer_value, papers),
             };
             t.bundle_transactions.push(bt);
         }
     }
 
-    fn distribute_bundle_transactions(&mut self, bundle_transactions: &mut Vec<BundleTransaction>, transfer_value: Ratio<BigInt>) -> DistributionOutcome {
+    fn distribute_bundle_transactions(
+        &mut self,
+        bundle_transactions: &mut Vec<BundleTransaction>,
+        transfer_value: Ratio<BigInt>,
+    ) -> DistributionOutcome {
         // the bundle_transactions should already have been removed from the previous holder
         let mut papers_exhausted = 0;
         let mut ballot_states = Vec::new();
@@ -112,30 +122,37 @@ impl CountEngine {
                 loop {
                     match ballot_state.to_next_preference() {
                         Some(candidate) => {
-                            if self.elected.contains(&candidate) || self.excluded.contains(&candidate) {
+                            if self.elected.contains(&candidate)
+                                || self.excluded.contains(&candidate)
+                            {
                                 continue;
                             } else {
                                 ballot_states.push(ballot_state);
                                 break;
                             }
-                        },
+                        }
                         None => {
                             papers_exhausted += 1;
                             break;
                         }
                     };
-                };
+                }
             }
         }
         let votes_exhausted = CountEngine::apply_transfer_value(&transfer_value, papers_exhausted);
         self.bundle_ballot_states(ballot_states, transfer_value);
         DistributionOutcome {
             votes_exhausted,
-            papers_exhausted
+            papers_exhausted,
         }
     }
 
-    pub fn new(vacancies: u32, candidates: CandidateData, ballot_states: Vec<BallotState>, automation: VecDeque<usize>) -> CountEngine {
+    pub fn new(
+        vacancies: u32,
+        candidates: CandidateData,
+        ballot_states: Vec<BallotState>,
+        automation: VecDeque<usize>,
+    ) -> CountEngine {
         let total_papers = ballot_states.iter().map(|bs| bs.count).sum();
         let mut engine = CountEngine {
             candidates,
@@ -150,26 +167,46 @@ impl CountEngine {
             excluded: Vec::new(),
             actions_pending: VecDeque::new(),
         };
-        engine.bundle_ballot_states(ballot_states, Ratio::from_integer(FromPrimitive::from_u32(1).unwrap()));
+        engine.bundle_ballot_states(
+            ballot_states,
+            Ratio::from_integer(FromPrimitive::from_u32(1).unwrap()),
+        );
         engine.push_action(CountAction::FirstCount);
         engine
     }
 
-
     #[allow(dead_code)]
     pub fn print_debug(&self) {
-        println!("-- CountEngine::print_debug (round {}) --", self.count_states.len());
+        println!(
+            "-- CountEngine::print_debug (round {}) --",
+            self.count_states.len()
+        );
         println!("Candidates: {}", self.candidates.count);
         println!("Total papers: {}", self.total_papers);
         println!("Quota: {}", self.quota);
         println!("Candidate totals:");
-        let mut cbt: Vec<(&CandidateIndex, (u32, u32))> = self.candidate_bundle_transactions.iter().map(|a| (a.0, (a.1.total_votes(), a.1.total_papers()))).collect();
+        let mut cbt: Vec<(&CandidateIndex, (u32, u32))> = self.candidate_bundle_transactions
+            .iter()
+            .map(|a| (a.0, (a.1.total_votes(), a.1.total_papers())))
+            .collect();
         cbt.sort_by(|a, b| b.1.cmp(&a.1));
-        for (candidate_id, (votes, papers) ) in cbt {
-            println!("    {} votes for candidate {} ({}) [{} papers]", votes, self.candidates.get_name(*candidate_id), self.candidates.get_party(*candidate_id), papers);
+        for (candidate_id, (votes, papers)) in cbt {
+            println!(
+                "    {} votes for candidate {} ({}) [{} papers]",
+                votes,
+                self.candidates.get_name(*candidate_id),
+                self.candidates.get_party(*candidate_id),
+                papers
+            );
         }
-        println!("Candidates elected: {}", self.candidates.vec_names(&self.elected));
-        println!("Candidates excluded: {}", self.candidates.vec_names(&self.excluded));
+        println!(
+            "Candidates elected: {}",
+            self.candidates.vec_names(&self.elected)
+        );
+        println!(
+            "Candidates excluded: {}",
+            self.candidates.vec_names(&self.excluded)
+        );
     }
 
     fn determine_elected_candidates(&mut self) -> Vec<CandidateIndex> {
@@ -182,11 +219,13 @@ impl CountEngine {
             }
             let votes = cbt.total_votes();
             if votes > self.quota {
-                let v = votes_candidate.entry(cbt.total_votes()).or_insert(Vec::new());
+                let v = votes_candidate
+                    .entry(cbt.total_votes())
+                    .or_insert(Vec::new());
                 v.push(*candidate_id);
             }
         }
- 
+
         let mut elected: Vec<CandidateIndex> = Vec::new();
         let mut possible: Vec<(&u32, &Vec<CandidateIndex>)> = votes_candidate.iter().collect();
         possible.sort_by(|a, b| b.0.cmp(a.0));
@@ -206,10 +245,13 @@ impl CountEngine {
     }
 
     fn elect(&mut self, candidate: CandidateIndex, state: &CountState) {
-        if self.elected.contains(&candidate) { 
+        if self.elected.contains(&candidate) {
             panic!("Candidate elected twice");
         }
-        println!("Elected candidate: {}", self.candidates.vec_names(&vec![candidate]));
+        println!(
+            "Elected candidate: {}",
+            self.candidates.vec_names(&vec![candidate])
+        );
         self.elected.push(candidate);
         self.inactive.insert(candidate);
         let candidate_votes = *state.votes_per_candidate.get(&candidate).unwrap();
@@ -219,7 +261,8 @@ impl CountEngine {
         } else {
             0
         };
-        let transfer_value = Ratio::from_integer(FromPrimitive::from_u32(excess_votes).unwrap()) / Ratio::from_integer(FromPrimitive::from_u32(candidate_papers).unwrap());
+        let transfer_value = Ratio::from_integer(FromPrimitive::from_u32(excess_votes).unwrap())
+            / Ratio::from_integer(FromPrimitive::from_u32(candidate_papers).unwrap());
         self.push_action(CountAction::ElectionDistribution(candidate, transfer_value));
     }
 
@@ -234,17 +277,31 @@ impl CountEngine {
             votes_per_candidate: vpc,
             papers_per_candidate: ppc,
             papers_exhausted,
-            votes_exhausted
+            votes_exhausted,
         }
     }
 
-    fn process_election_distribution(&mut self, candidate: CandidateIndex, transfer_value: Ratio<BigInt>) {
-        let mut bundles_to_distribute = self.candidate_bundle_transactions.remove(&candidate).unwrap().bundle_transactions;
+    fn process_election_distribution(
+        &mut self,
+        candidate: CandidateIndex,
+        transfer_value: Ratio<BigInt>,
+    ) {
+        let mut bundles_to_distribute = self.candidate_bundle_transactions
+            .remove(&candidate)
+            .unwrap()
+            .bundle_transactions;
         self.distribute_bundle_transactions(&mut bundles_to_distribute, transfer_value);
     }
 
-    fn process_exclusion_distribution(&mut self, candidate: CandidateIndex, transfer_value: Ratio<BigInt>) {
-        let current_bundles = self.candidate_bundle_transactions.remove(&candidate).unwrap().bundle_transactions;
+    fn process_exclusion_distribution(
+        &mut self,
+        candidate: CandidateIndex,
+        transfer_value: Ratio<BigInt>,
+    ) {
+        let current_bundles = self.candidate_bundle_transactions
+            .remove(&candidate)
+            .unwrap()
+            .bundle_transactions;
         let mut bundles_to_distribute = Vec::new();
         let mut bundles_to_hold = Vec::new();
         for bundle in current_bundles {
@@ -256,7 +313,12 @@ impl CountEngine {
         }
         // put the remaining bundles, if any, back in
         if bundles_to_hold.len() > 0 {
-            self.candidate_bundle_transactions.insert(candidate, CandidateBundleTransactions { bundle_transactions: bundles_to_hold });
+            self.candidate_bundle_transactions.insert(
+                candidate,
+                CandidateBundleTransactions {
+                    bundle_transactions: bundles_to_hold,
+                },
+            );
         }
         self.distribute_bundle_transactions(&mut bundles_to_distribute, transfer_value);
     }
@@ -275,7 +337,7 @@ impl CountEngine {
             if vote_set.len() == candidates.len() {
                 println!("find tie breaker: match found in round {}", idx);
                 candidate_votes.sort_by_key(|&(_, v)| v);
-                return Some(candidate_votes.drain(..).map(|(c,_)| c).collect())
+                return Some(candidate_votes.drain(..).map(|(c, _)| c).collect());
             }
         }
         None
@@ -290,8 +352,16 @@ impl CountEngine {
             votes_eligible_candidate.push((candidate.clone(), votes.clone()));
         }
         assert!(votes_eligible_candidate.len() > 0);
-        let min_votes = votes_eligible_candidate.iter().map(|&(_, v)| v).min().unwrap();
-        let exclusion_candidates: Vec<CandidateIndex> = votes_eligible_candidate.drain(..).filter(|&(_, v)| v == min_votes).map(|(c, _)| c).collect();
+        let min_votes = votes_eligible_candidate
+            .iter()
+            .map(|&(_, v)| v)
+            .min()
+            .unwrap();
+        let exclusion_candidates: Vec<CandidateIndex> = votes_eligible_candidate
+            .drain(..)
+            .filter(|&(_, v)| v == min_votes)
+            .map(|(c, _)| c)
+            .collect();
 
         let possibilities = exclusion_candidates.len();
         let to_exclude = if possibilities == 0 {
@@ -300,23 +370,27 @@ impl CountEngine {
             exclusion_candidates[0]
         } else {
             match self.find_tie_breaker(&exclusion_candidates) {
-                Some(tie_broken_candidates) => {
-                    tie_broken_candidates[0]
-                }
+                Some(tie_broken_candidates) => tie_broken_candidates[0],
                 None => {
                     let auto = self.automation.pop_front().unwrap();
                     exclusion_candidates[auto]
                 }
             }
         };
-        println!("exclude_a_candidate: {}", self.candidates.vec_names(&exclusion_candidates));
+        println!(
+            "exclude_a_candidate: {}",
+            self.candidates.vec_names(&exclusion_candidates)
+        );
 
         self.excluded.push(to_exclude);
         self.inactive.insert(to_exclude);
 
         let mut transfer_values = HashSet::new();
         {
-            let bundle_transactions = &self.candidate_bundle_transactions.get(&to_exclude).unwrap().bundle_transactions;
+            let bundle_transactions = &self.candidate_bundle_transactions
+                .get(&to_exclude)
+                .unwrap()
+                .bundle_transactions;
             for bundle_transaction in bundle_transactions.iter() {
                 transfer_values.insert(bundle_transaction.transfer_value.clone());
             }
@@ -325,7 +399,10 @@ impl CountEngine {
         transfer_values.sort();
         transfer_values.reverse();
         for transfer_value in transfer_values {
-            self.push_action(CountAction::ExclusionDistribution(to_exclude, transfer_value));
+            self.push_action(CountAction::ExclusionDistribution(
+                to_exclude,
+                transfer_value,
+            ));
         }
     }
 
@@ -342,13 +419,16 @@ impl CountEngine {
             CountAction::FirstCount => {
                 // we don't need to do anything on the first count
                 println!("Action: first count");
-            },
+            }
             CountAction::ExclusionDistribution(candidate, transfer_value) => {
                 println!("Action: exclusion distribution of papers from candidate {} with transfer value {}", self.candidates.vec_names(&vec![candidate]), transfer_value);
                 self.process_exclusion_distribution(candidate, transfer_value);
             }
             CountAction::ElectionDistribution(candidate, transfer_value) => {
-                println!("Action: election distribution of candidate {}", self.candidates.vec_names(&vec![candidate]));
+                println!(
+                    "Action: election distribution of candidate {}",
+                    self.candidates.vec_names(&vec![candidate])
+                );
                 self.process_election_distribution(candidate, transfer_value);
             }
         }
@@ -368,7 +448,12 @@ impl CountEngine {
 
         // are we done? check the various termination procedures from the Act
         if self.actions_pending.len() == 0 {
-            let mut continuing_candidates: Vec<CandidateIndex> = count_state.votes_per_candidate.keys().filter(|c| !self.elected.contains(c) && !self.excluded.contains(c)).map(|c| *c).collect();
+            let mut continuing_candidates: Vec<CandidateIndex> = count_state
+                .votes_per_candidate
+                .keys()
+                .filter(|c| !self.elected.contains(c) && !self.excluded.contains(c))
+                .map(|c| *c)
+                .collect();
             continuing_candidates.sort_by_key(|c| count_state.votes_per_candidate.get(c).unwrap());
             let remaining_vacancies = self.vacancies as usize - self.elected.len();
             // section 273(18); if we're down to N candidates in the running, with N vacancies, the remaining candidates are elected
@@ -383,7 +468,9 @@ impl CountEngine {
             if continuing_candidates.len() == 2 {
                 let a = continuing_candidates[0];
                 let b = continuing_candidates[1];
-                if count_state.votes_per_candidate.get(&a).unwrap() == count_state.votes_per_candidate.get(&b).unwrap() {
+                if count_state.votes_per_candidate.get(&a).unwrap()
+                    == count_state.votes_per_candidate.get(&b).unwrap()
+                {
                     panic!("Must manually choose for tie on last spot.");
                 } else {
                     self.elect(b, &count_state);

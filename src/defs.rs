@@ -2,7 +2,7 @@
  * core types
  */
 
-use num::rational::{BigRational};
+use num::rational::BigRational;
 
 // represents a candidate's index on the ballot paper
 // ranges from 0..N-1 where N is the number of candidates
@@ -18,7 +18,7 @@ pub struct GroupIndex(pub u8);
 // same form, and the current state of those ballots within
 // the count (e.g. the current preference)
 #[derive(Debug)]
-pub struct BallotState { 
+pub struct BallotState {
     pub form: Vec<CandidateIndex>,
     pub count: u32,
     pub active_preference: usize,
@@ -59,7 +59,7 @@ pub struct CandidateData {
     pub count: usize,
     pub names: Vec<String>,
     pub parties: Vec<String>,
-    pub tickets: Vec<Vec<CandidateIndex>>
+    pub tickets: Vec<Vec<CandidateIndex>>,
 }
 
 impl CandidateData {

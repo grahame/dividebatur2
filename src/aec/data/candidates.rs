@@ -8,7 +8,7 @@ extern crate csv;
 use std::error::Error;
 use std::fs::File;
 
-#[derive(Debug,Deserialize)]
+#[derive(Debug, Deserialize)]
 pub struct AECAllCandidateRow {
     // the bits we actually care about
     pub ticket: String,
@@ -57,6 +57,12 @@ pub fn load(filename: &str, state: &str) -> Result<Vec<AECAllCandidateRow>, Box<
     // a little subtle: we need to sort in ballot paper order, which means ticket ordering:
     //   A, B, C, ... Z, AA, AB, .. AZ, etc
     // (rather than a standard lexical sort)
-    rows.sort_by(|a, b| (a.ticket.len(), &a.ticket, &a.ballot_position).cmp(&(b.ticket.len(), &b.ticket, &b.ballot_position)));
+    rows.sort_by(|a, b| {
+        (a.ticket.len(), &a.ticket, &a.ballot_position).cmp(&(
+            b.ticket.len(),
+            &b.ticket,
+            &b.ballot_position,
+        ))
+    });
     Ok((rows))
 }

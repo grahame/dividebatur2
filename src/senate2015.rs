@@ -2,9 +2,11 @@ use defs::*;
 use engine::*;
 use aec;
 use std::ascii::AsciiExt;
-use std::collections::{VecDeque};
+use std::collections::VecDeque;
 
-fn load_candidate_data(candidates: Vec<aec::data::candidates::AECAllCandidateRow>) -> CandidateData {
+fn load_candidate_data(
+    candidates: Vec<aec::data::candidates::AECAllCandidateRow>,
+) -> CandidateData {
     let mut names = Vec::new();
     let mut parties = Vec::new();
 
@@ -13,7 +15,10 @@ fn load_candidate_data(candidates: Vec<aec::data::candidates::AECAllCandidateRow
 
     // NB: the Candidate Rows are sorted into ballot paper order
     for (idx, candidate) in candidates.iter().enumerate() {
-        names.push(format!("{}, {}", candidate.surname, candidate.ballot_given_nm));
+        names.push(format!(
+            "{}, {}",
+            candidate.surname, candidate.ballot_given_nm
+        ));
         parties.push(candidate.party_ballot_nm.clone());
         if candidate.ticket == "UG" {
             continue;
@@ -31,12 +36,15 @@ fn load_candidate_data(candidates: Vec<aec::data::candidates::AECAllCandidateRow
         count: candidates.len(),
         names: names,
         parties: parties,
-        tickets: tickets
+        tickets: tickets,
     }
 }
 
 fn run_state(state: &str, vacancies: u32) {
-    let candidates = match aec::data::candidates::load("aec_data/fed2016/common/aec-senate-candidateinformation-20499.csv", state) {
+    let candidates = match aec::data::candidates::load(
+        "aec_data/fed2016/common/aec-senate-candidateinformation-20499.csv",
+        state,
+    ) {
         Ok(rows) => rows,
         Err(error) => {
             panic!("Couldn't read candidates file: {:?}", error);
@@ -44,7 +52,11 @@ fn run_state(state: &str, vacancies: u32) {
     };
     let cd = load_candidate_data(candidates);
 
-    let prefpath = format!("aec_data/fed2016/{}/data/aec-senate-formalpreferences-20499-{}.csv", state.to_ascii_lowercase(), state.to_ascii_uppercase());
+    let prefpath = format!(
+        "aec_data/fed2016/{}/data/aec-senate-formalpreferences-20499-{}.csv",
+        state.to_ascii_lowercase(),
+        state.to_ascii_uppercase()
+    );
 
     let ballot_states = match aec::data::formalpreferences::load(&prefpath[..], &cd) {
         Ok(data) => data,
@@ -53,7 +65,10 @@ fn run_state(state: &str, vacancies: u32) {
         }
     };
 
-    println!("{} unique bundle states at commencement of count.", ballot_states.len());
+    println!(
+        "{} unique bundle states at commencement of count.",
+        ballot_states.len()
+    );
 
     let mut automation = VecDeque::new();
     automation.push_back(0);
@@ -72,7 +87,7 @@ fn run_state(state: &str, vacancies: u32) {
                 true
             }
         }
-    } { }
+    } {}
 }
 
 pub fn run() {
