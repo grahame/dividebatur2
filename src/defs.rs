@@ -21,16 +21,25 @@ pub struct GroupIndex(pub u8);
 pub struct BallotState { 
     pub form: Vec<CandidateIndex>,
     pub count: u32,
-    pub active_preference: usize
+    pub active_preference: usize,
 }
 
 impl BallotState {
+    fn alive(&self) -> bool {
+        self.active_preference < self.form.len()
+    }
+
     pub fn current_preference(&self) -> Option<CandidateIndex> {
-        if self.active_preference < self.form.len() {
+        if self.alive() {
             Some(self.form[self.active_preference])
         } else {
             None
         }
+    }
+
+    pub fn to_next_preference(&mut self) -> bool {
+        self.active_preference += 1;
+        return self.alive()
     }
 }
 
@@ -39,7 +48,6 @@ impl BallotState {
 // represents the integer value of the votes transferred to the
 // candidate, after the application of the transfer value to the
 // total number of papers in the transaction
-#[derive(Debug)]
 pub struct BundleTransaction {
     pub ballot_states: Vec<BallotState>,
     pub transfer_value: BigRational,
@@ -47,12 +55,18 @@ pub struct BundleTransaction {
     pub papers: u32,
 }
 
-#[derive(Debug)]
 pub struct CandidateData {
     pub count: usize,
     pub names: Vec<String>,
     pub parties: Vec<String>,
     pub tickets: Vec<Vec<CandidateIndex>>
+}
+
+impl CandidateData {
+    pub fn vec_names(&self, candidates: &Vec<CandidateIndex>) -> String {
+        let names: Vec<String> = candidates.iter().map(|c| self.get_name(*c)).collect();
+        names.join(", ")
+    }
 }
 
 impl CandidateData {

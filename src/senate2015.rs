@@ -54,19 +54,19 @@ fn run_state(state: &str, vacancies: u32) {
 
     println!("{} unique bundle states at commencement of count.", ballot_states.len());
 
-    let candidate_count = cd.count.clone();
-    let mut engine = CountEngine::new(vacancies, candidate_count as u32, ballot_states);
-    engine.print_debug(&cd);
+    let mut engine = CountEngine::new(vacancies, cd, ballot_states);
     while {
-        match engine.count() {
+        let outcome = engine.count();
+        engine.print_debug();
+        match outcome {
             CountOutcome::CountComplete(nrounds, state) => {
-                engine.print_debug(&cd);
+                engine.print_debug();
                 println!("{:?}", state);
                 println!("Election complete after {} rounds of counting.", nrounds);
                 false
             }
             CountOutcome::CountContinues(_, _) => {
-                engine.print_debug(&cd);
+                engine.print_debug();
                 true
             }
         }
