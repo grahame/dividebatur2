@@ -11,7 +11,7 @@ pub enum CountOutcome {
 }
 
 // these actions are in precedence order, low-to-high
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 enum CountAction {
     FirstCount,
     ExclusionDistribution(CandidateIndex, Ratio<BigInt>),
@@ -116,9 +116,7 @@ impl CountEngine {
                 loop {
                     match ballot_state.to_next_preference() {
                         Some(candidate) => {
-                            if self.elected.contains(&candidate)
-                                || self.excluded.contains(&candidate)
-                            {
+                            if self.inactive.contains(&candidate) {
                                 continue;
                             } else {
                                 ballot_states.push(ballot_state);
@@ -208,7 +206,7 @@ impl CountEngine {
         // the number of votes they are holding, so we can determine any ties
         let mut votes_candidate: HashMap<u32, Vec<CandidateIndex>> = HashMap::new();
         for (candidate_id, cbt) in self.candidate_bundle_transactions.iter() {
-            if self.elected.contains(candidate_id) || self.excluded.contains(candidate_id) {
+            if self.inactive.contains(candidate_id) {
                 continue;
             }
             let votes = cbt.total_votes();
@@ -307,10 +305,8 @@ impl CountEngine {
         }
         // put the remaining bundles, if any, back in
         if bundles_to_hold.len() > 0 {
-            self.candidate_bundle_transactions.insert(
-                candidate,
-                CandidateBundleTransactions(bundles_to_hold)
-            );
+            self.candidate_bundle_transactions
+                .insert(candidate, CandidateBundleTransactions(bundles_to_hold));
         }
         self.distribute_bundle_transactions(&mut bundles_to_distribute, transfer_value);
     }
@@ -338,7 +334,7 @@ impl CountEngine {
     fn exclude_a_candidate(&mut self, count_state: &CountState) {
         let mut votes_eligible_candidate = Vec::new();
         for (candidate, votes) in count_state.votes_per_candidate.iter() {
-            if self.elected.contains(&candidate) || self.excluded.contains(&candidate) {
+            if self.inactive.contains(&candidate) {
                 continue;
             }
             votes_eligible_candidate.push((candidate.clone(), votes.clone()));
@@ -443,7 +439,7 @@ impl CountEngine {
             let mut continuing_candidates: Vec<CandidateIndex> = count_state
                 .votes_per_candidate
                 .keys()
-                .filter(|c| !self.elected.contains(c) && !self.excluded.contains(c))
+                .filter(|c| !self.inactive.contains(c))
                 .map(|c| *c)
                 .collect();
             continuing_candidates.sort_by_key(|c| count_state.votes_per_candidate.get(c).unwrap());
