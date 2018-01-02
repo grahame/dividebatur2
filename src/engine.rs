@@ -104,15 +104,15 @@ impl CountEngine {
 
     fn distribute_bundle_transactions(
         &mut self,
-        bundle_transactions: &mut Vec<BundleTransaction>,
+        bundle_transactions: Vec<BundleTransaction>,
         transfer_value: Ratio<BigInt>,
     ) -> DistributionOutcome {
         // the bundle_transactions should already have been removed from the previous holder
         let mut papers_exhausted = 0;
         let mut ballot_states = Vec::new();
 
-        for mut bundle_transaction in bundle_transactions.drain(..) {
-            for mut ballot_state in bundle_transaction.ballot_states.drain(..) {
+        for mut bundle_transaction in bundle_transactions {
+            for mut ballot_state in bundle_transaction.ballot_states {
                 loop {
                     match ballot_state.to_next_preference() {
                         Some(candidate) => {
@@ -278,11 +278,11 @@ impl CountEngine {
         candidate: CandidateIndex,
         transfer_value: Ratio<BigInt>,
     ) {
-        let mut bundles_to_distribute = self.candidate_bundle_transactions
+        let bundles_to_distribute = self.candidate_bundle_transactions
             .remove(&candidate)
             .unwrap()
             .0;
-        self.distribute_bundle_transactions(&mut bundles_to_distribute, transfer_value);
+        self.distribute_bundle_transactions(bundles_to_distribute, transfer_value);
     }
 
     fn process_exclusion_distribution(
@@ -308,7 +308,7 @@ impl CountEngine {
             self.candidate_bundle_transactions
                 .insert(candidate, CandidateBundleTransactions(bundles_to_hold));
         }
-        self.distribute_bundle_transactions(&mut bundles_to_distribute, transfer_value);
+        self.distribute_bundle_transactions(bundles_to_distribute, transfer_value);
     }
 
     fn find_tie_breaker(&self, candidates: &Vec<CandidateIndex>) -> Option<Vec<(CandidateIndex)>> {
