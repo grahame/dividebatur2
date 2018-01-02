@@ -25,6 +25,48 @@ pub struct BallotState {
     pub active_preference: usize,
 }
 
+pub struct CountResults {
+    elected: Vec<CandidateIndex>,
+    excluded: Vec<CandidateIndex>,
+    inactive: HashSet<CandidateIndex>, // either elected or excluded; fast lookup
+}
+
+impl CountResults {
+    pub fn new() -> CountResults {
+        CountResults {
+            elected: Vec::new(),
+            excluded: Vec::new(),
+            inactive: HashSet::new(),
+        }
+    }
+
+    pub fn number_elected(&self) -> u32 {
+        self.elected.len() as u32
+    }
+
+    pub fn get_elected(&self) -> &Vec<CandidateIndex> {
+        &self.elected
+    }
+
+    pub fn get_excluded(&self) -> &Vec<CandidateIndex> {
+        &self.excluded
+    }
+
+    pub fn candidate_elected(&mut self, candidate: CandidateIndex) {
+        self.elected.push(candidate);
+        self.inactive.insert(candidate);
+    }
+
+    pub fn candidate_excluded(&mut self, candidate: CandidateIndex) {
+        self.excluded.push(candidate);
+        self.inactive.insert(candidate);
+    }
+
+    pub fn candidate_is_inactive(&self, candidate: &CandidateIndex) -> bool {
+        self.inactive.contains(&candidate)
+    }
+}
+
 impl BallotState {
     pub fn alive(&self) -> bool {
         self.active_preference < self.form.len()
@@ -38,12 +80,12 @@ impl BallotState {
         }
     }
 
-    pub fn to_next_preference(&mut self, inactive: &HashSet<CandidateIndex>) {
+    pub fn to_next_preference(&mut self, results: &CountResults) {
         loop {
             self.active_preference += 1;
             match self.current_preference() {
                 Some(candidate) => {
-                    if !inactive.contains(&candidate) {
+                    if !results.candidate_is_inactive(&candidate) {
                         break;
                     }
                 }
