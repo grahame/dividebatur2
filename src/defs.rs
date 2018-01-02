@@ -3,6 +3,7 @@
  */
 
 use num::rational::BigRational;
+use std::collections::{HashSet};
 
 // represents a candidate's index on the ballot paper
 // ranges from 0..N-1 where N is the number of candidates
@@ -25,7 +26,7 @@ pub struct BallotState {
 }
 
 impl BallotState {
-    fn alive(&self) -> bool {
+    pub fn alive(&self) -> bool {
         self.active_preference < self.form.len()
     }
 
@@ -37,9 +38,20 @@ impl BallotState {
         }
     }
 
-    pub fn to_next_preference(&mut self) -> Option<CandidateIndex> {
-        self.active_preference += 1;
-        return self.current_preference();
+    pub fn to_next_preference(&mut self, inactive: &HashSet<CandidateIndex>) {
+        loop {
+            self.active_preference += 1;
+            match self.current_preference() {
+                Some(candidate) => {
+                    if !inactive.contains(&candidate) {
+                        break;
+                    }
+                }
+                None => {
+                    break;
+                }
+            }
+        }
     }
 }
 

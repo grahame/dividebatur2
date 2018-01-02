@@ -3,6 +3,7 @@ use defs::*;
 use num::BigInt;
 use num::{FromPrimitive, ToPrimitive};
 use num::rational::Ratio;
+use rayon::prelude::*;
 
 #[derive(Debug)]
 pub enum CountOutcome {
@@ -108,29 +109,20 @@ impl CountEngine {
         transfer_value: Ratio<BigInt>,
     ) -> DistributionOutcome {
         // the bundle_transactions should already have been removed from the previous holder
-        let mut papers_exhausted = 0;
         let mut ballot_states = Vec::new();
+        let initial_papers: u32 = bundle_transactions.iter().map(|bs| bs.papers).sum();
 
         for mut bundle_transaction in bundle_transactions {
-            for mut ballot_state in bundle_transaction.ballot_states {
-                loop {
-                    match ballot_state.to_next_preference() {
-                        Some(candidate) => {
-                            if self.inactive.contains(&candidate) {
-                                continue;
-                            } else {
-                                ballot_states.push(ballot_state);
-                                break;
-                            }
-                        }
-                        None => {
-                            papers_exhausted += 1;
-                            break;
-                        }
-                    };
+            bundle_transaction.ballot_states.par_iter_mut().for_each(|ballot_state| {
+                ballot_state.to_next_preference(&self.inactive);
+            });
+            for ballot_state in bundle_transaction.ballot_states {
+                if ballot_state.alive() {
+                    ballot_states.push(ballot_state);
                 }
             }
         }
+        let papers_exhausted = initial_papers - ballot_states.len() as u32;
         let votes_exhausted = CountEngine::apply_transfer_value(&transfer_value, papers_exhausted);
         self.bundle_ballot_states(ballot_states, transfer_value);
         DistributionOutcome {
