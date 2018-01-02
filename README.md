@@ -5,7 +5,7 @@ Currently supports the following STV election types:
  - Australian Senate under the Commonwealth Electoral Act (1918) (post 2015 voting reforms)
 
 dividebatur2 is a work-in-progress, porting [dividebatur](https://github.com/grahame/dividebatur) to the Rust 
-programming language. If you're after something more mature, check this out. The primary motivation for the
+programming language. If you're after something more mature, check that out. The primary motivation for the
 rewrite is improvements in performance, and in correctness and maintainability. dividebatur2 is currently
 clocking in ~ 15x faster than the original Python implementation.
 

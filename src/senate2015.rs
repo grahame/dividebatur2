@@ -41,6 +41,8 @@ fn load_candidate_data(
 }
 
 fn run_state(state: &str, vacancies: u32) {
+    println!(" -- LOAD: {}", state);
+
     let candidates = match aec::data::candidates::load(
         "aec_data/fed2016/common/aec-senate-candidateinformation-20499.csv",
         state,
@@ -91,5 +93,8 @@ fn run_state(state: &str, vacancies: u32) {
 }
 
 pub fn run() {
-    run_state("NSW", 12);
+    let australia = vec![(2, "ACT"), (12, "NSW"), (2, "NT"), (12, "QLD"), (12, "SA"), (12, "TAS"), (12, "VIC"), (12, "WA")];
+    for (vacancies, state) in australia {
+        run_state(state, vacancies);
+    }
 }
