@@ -35,7 +35,7 @@ struct DistributionOutcome {
 pub struct CountEngine {
     candidates: CandidateData,
     vacancies: u32,
-    candidate_bundle_transactions: CandidateToBundleTransactions,
+    candidate_bundle_transactions: HashMap<CandidateIndex, CandidateBundleTransactions>,
     total_papers: u32,
     count_states: Vec<CountState>,
     quota: u32,
@@ -47,23 +47,17 @@ pub struct CountEngine {
 }
 
 // all bundle transactions held by a candidate, in a given round of the count
-struct CandidateBundleTransactions {
-    bundle_transactions: Vec<BundleTransaction>,
-}
-
-type CandidateToBundleTransactions = HashMap<CandidateIndex, CandidateBundleTransactions>;
+struct CandidateBundleTransactions(Vec<BundleTransaction>);
 
 impl CandidateBundleTransactions {
     fn total_votes(&self) -> u32 {
-        self.bundle_transactions.iter().map(|bt| bt.votes).sum()
+        self.0.iter().map(|bt| bt.votes).sum()
     }
     fn total_papers(&self) -> u32 {
-        self.bundle_transactions.iter().map(|bt| bt.papers).sum()
+        self.0.iter().map(|bt| bt.papers).sum()
     }
     fn new() -> CandidateBundleTransactions {
-        CandidateBundleTransactions {
-            bundle_transactions: Vec::new(),
-        }
+        CandidateBundleTransactions(Vec::new())
     }
 }
 
@@ -104,7 +98,7 @@ impl CountEngine {
                 papers: papers,
                 votes: CountEngine::apply_transfer_value(&transfer_value, papers),
             };
-            t.bundle_transactions.push(bt);
+            t.0.push(bt);
         }
     }
 
@@ -117,7 +111,7 @@ impl CountEngine {
         let mut papers_exhausted = 0;
         let mut ballot_states = Vec::new();
 
-        for bundle_transaction in bundle_transactions {
+        for mut bundle_transaction in bundle_transactions.drain(..) {
             for mut ballot_state in bundle_transaction.ballot_states.drain(..) {
                 loop {
                     match ballot_state.to_next_preference() {
@@ -289,7 +283,7 @@ impl CountEngine {
         let mut bundles_to_distribute = self.candidate_bundle_transactions
             .remove(&candidate)
             .unwrap()
-            .bundle_transactions;
+            .0;
         self.distribute_bundle_transactions(&mut bundles_to_distribute, transfer_value);
     }
 
@@ -301,7 +295,7 @@ impl CountEngine {
         let current_bundles = self.candidate_bundle_transactions
             .remove(&candidate)
             .unwrap()
-            .bundle_transactions;
+            .0;
         let mut bundles_to_distribute = Vec::new();
         let mut bundles_to_hold = Vec::new();
         for bundle in current_bundles {
@@ -315,9 +309,7 @@ impl CountEngine {
         if bundles_to_hold.len() > 0 {
             self.candidate_bundle_transactions.insert(
                 candidate,
-                CandidateBundleTransactions {
-                    bundle_transactions: bundles_to_hold,
-                },
+                CandidateBundleTransactions(bundles_to_hold)
             );
         }
         self.distribute_bundle_transactions(&mut bundles_to_distribute, transfer_value);
@@ -390,7 +382,7 @@ impl CountEngine {
             let bundle_transactions = &self.candidate_bundle_transactions
                 .get(&to_exclude)
                 .unwrap()
-                .bundle_transactions;
+                .0;
             for bundle_transaction in bundle_transactions.iter() {
                 transfer_values.insert(bundle_transaction.transfer_value.clone());
             }
