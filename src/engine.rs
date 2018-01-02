@@ -111,9 +111,12 @@ impl CountEngine {
         let initial_papers: u32 = bundle_transactions.iter().map(|bs| bs.papers).sum();
 
         for mut bundle_transaction in bundle_transactions {
-            bundle_transaction.ballot_states.par_iter_mut().for_each(|ballot_state| {
-                ballot_state.to_next_preference(&self.results);
-            });
+            bundle_transaction
+                .ballot_states
+                .par_iter_mut()
+                .for_each(|ballot_state| {
+                    ballot_state.to_next_preference(&self.results);
+                });
             for ballot_state in bundle_transaction.ballot_states {
                 if ballot_state.alive() {
                     ballot_states.push(ballot_state);

@@ -3,7 +3,7 @@
  */
 
 use num::rational::BigRational;
-use std::collections::{HashSet};
+use std::collections::HashSet;
 
 // represents a candidate's index on the ballot paper
 // ranges from 0..N-1 where N is the number of candidates
