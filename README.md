@@ -1,4 +1,6 @@
-dividebatur2: process single-transferable-vote elections
+# dividebatur2: process single-transferable-vote elections
+
+[![Travis status](https://travis-ci.org/grahame/dividebatur2.svg?branch=master)](https://travis-ci.org/grahame/dividebatur2)
 
 Currently supports the following STV election types:
 
