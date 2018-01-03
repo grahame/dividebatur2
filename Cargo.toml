@@ -6,6 +6,9 @@ authors = ["Grahame Bowland <grahame@angrygoats.net>"]
 homepage = "https://github.com/grahame/dividebatur2/"
 license = "Apache-2.0"
 maintenance = "experimental"
+exclude = [
+  "aec_data"
+]
 
 [badges]
 travis-ci = { repository = "grahame/dividebatur2", branch = "master" }
