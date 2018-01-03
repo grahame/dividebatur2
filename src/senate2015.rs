@@ -93,7 +93,16 @@ fn run_state(state: &str, vacancies: u32) {
 }
 
 pub fn run() {
-    let australia = vec![(2, "ACT"), (12, "NSW"), (2, "NT"), (12, "QLD"), (12, "SA"), (12, "TAS"), (12, "VIC"), (12, "WA")];
+    let australia = vec![
+        (2, "ACT"),
+        (12, "NSW"),
+        (2, "NT"),
+        (12, "QLD"),
+        (12, "SA"),
+        (12, "TAS"),
+        (12, "VIC"),
+        (12, "WA"),
+    ];
     for (vacancies, state) in australia {
         run_state(state, vacancies);
     }
