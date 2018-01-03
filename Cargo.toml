@@ -1,7 +1,14 @@
 [package]
 name = "dividebatur"
+description = "Single Transferable Vote election result counter"
 version = "0.1.0"
 authors = ["Grahame Bowland <grahame@angrygoats.net>"]
+homepage = "https://github.com/grahame/dividebatur2/"
+license = "Apache-2.0"
+maintenance = "experimental"
+
+[badges]
+travis-ci = { repository = "grahame/dividebatur2", branch = "master" }
 
 [dependencies]
 csv = "1.0.0-beta.5"
