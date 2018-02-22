@@ -5,7 +5,6 @@ version = "0.1.0"
 authors = ["Grahame Bowland <grahame@angrygoats.net>"]
 homepage = "https://github.com/grahame/dividebatur2/"
 license = "Apache-2.0"
-maintenance = "experimental"
 exclude = [
   "aec_data"
 ]
@@ -19,5 +18,5 @@ serde = "1.0"
 serde_derive = "1.0"
 serde_json = "1.0"
 tempfile = "2.2.0"
-rayon = "0.9"
+rayon = "1.0.0"
 num = "0.1"

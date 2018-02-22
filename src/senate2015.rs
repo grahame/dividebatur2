@@ -1,7 +1,6 @@
 use defs::*;
 use engine::*;
 use aec;
-use std::ascii::AsciiExt;
 use std::collections::VecDeque;
 
 fn load_candidate_data(
