@@ -3,7 +3,7 @@ use engine::*;
 use aec;
 use std::collections::VecDeque;
 
-fn load_candidate_data(
+pub fn load_candidate_data(
     candidates: Vec<aec::data::candidates::AECAllCandidateRow>,
 ) -> CandidateData {
     let mut names = Vec::new();

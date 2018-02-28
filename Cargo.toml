@@ -1,7 +1,7 @@
 [package]
 name = "dividebatur"
 description = "Single Transferable Vote election result counter"
-version = "0.2.0"
+version = "0.2.1"
 authors = ["Grahame Bowland <grahame@angrygoats.net>"]
 homepage = "https://github.com/grahame/dividebatur2/"
 license = "Apache-2.0"
