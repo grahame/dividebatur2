@@ -1,13 +1,21 @@
 [package]
 name = "dividebatur"
 description = "Single Transferable Vote election result counter"
-version = "0.1.0"
+version = "0.2.0"
 authors = ["Grahame Bowland <grahame@angrygoats.net>"]
 homepage = "https://github.com/grahame/dividebatur2/"
 license = "Apache-2.0"
 exclude = [
   "aec_data"
 ]
+
+[lib]
+name = "dividebatur"
+path = "src/lib.rs"
+
+[[bin]]
+name = "dividebatur"
+path = "src/main.rs"
 
 [badges]
 travis-ci = { repository = "grahame/dividebatur2", branch = "master" }
