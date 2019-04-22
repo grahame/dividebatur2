@@ -96,7 +96,7 @@ dependencies = [
 
 [[package]]
 name = "dividebatur"
-version = "0.2.1"
+version = "0.3.0"
 dependencies = [
  "csv 1.0.7 (registry+https://github.com/rust-lang/crates.io-index)",
  "flate2 1.0.7 (registry+https://github.com/rust-lang/crates.io-index)",
