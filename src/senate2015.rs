@@ -43,7 +43,7 @@ fn run_state(state: &str, vacancies: u32) {
     println!(" -- LOAD: {}", state);
 
     let candidates = match aec::data::candidates::load(
-        "aec_data/fed2016/common/aec-senate-candidateinformation-20499.csv",
+        "dividebatur-aec/fed2016/common/aec-senate-candidateinformation-20499.csv",
         state,
     ) {
         Ok(rows) => rows,
@@ -54,10 +54,11 @@ fn run_state(state: &str, vacancies: u32) {
     let cd = load_candidate_data(candidates);
 
     let prefpath = format!(
-        "aec_data/fed2016/{}/data/aec-senate-formalpreferences-20499-{}.csv",
+        "dividebatur-aec/fed2016/{}/data/aec-senate-formalpreferences-20499-{}.csv.gz",
         state.to_ascii_lowercase(),
         state.to_ascii_uppercase()
     );
+    println!("{}", prefpath);
 
     let ballot_states = match aec::data::formalpreferences::load(&prefpath[..], &cd) {
         Ok(data) => data,

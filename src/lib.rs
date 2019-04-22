@@ -1,5 +1,6 @@
 extern crate num;
 extern crate rayon;
+extern crate flate2;
 #[macro_use]
 extern crate serde_derive;
 

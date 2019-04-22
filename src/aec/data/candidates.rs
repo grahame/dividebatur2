@@ -64,5 +64,5 @@ pub fn load(filename: &str, state: &str) -> Result<Vec<AECAllCandidateRow>, Box<
             &b.ballot_position,
         ))
     });
-    Ok((rows))
+    Ok(rows)
 }

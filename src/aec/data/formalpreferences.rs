@@ -4,6 +4,7 @@
 //
 
 extern crate csv;
+extern crate flate2;
 
 use std::error::Error;
 use std::fs::File;
@@ -106,7 +107,8 @@ fn parse_preferences(raw_preferences: &String, candidates: &CandidateData) -> Ve
 
 pub fn load(filename: &str, candidates: &CandidateData) -> Result<Vec<BallotState>, Box<Error>> {
     let f = File::open(filename)?;
-    let mut rdr = csv::Reader::from_reader(f);
+    let gf = flate2::read::GzDecoder::new(f);
+    let mut rdr = csv::Reader::from_reader(gf);
     let hunk_size = 1024;
 
     let mut work_buf = Vec::new();

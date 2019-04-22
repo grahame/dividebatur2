@@ -37,7 +37,7 @@ Copyright 2013-18, The Dividebatur Authors
 
 See the file AUTHORS for a list of contributors to this software project.
 
-The data located under `aec_data/` is licensed under a 
+The data located under `dividebatur-aec/` is licensed under a 
 Creative Commons Attribution 3.0 Australia Licence (CC BY 3.0), and is 
 © Commonwealth of Australia. Full License terms are on the
 [AEC website](http://aec.gov.au/footer/Copyright.htm)
