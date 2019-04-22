@@ -58,7 +58,6 @@ fn run_state(state: &str, vacancies: u32) {
         state.to_ascii_lowercase(),
         state.to_ascii_uppercase()
     );
-    println!("{}", prefpath);
 
     let ballot_states = match aec::data::formalpreferences::load(&prefpath[..], &cd) {
         Ok(data) => data,
