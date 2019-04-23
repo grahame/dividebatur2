@@ -27,7 +27,7 @@ struct CandidatePreference(pub u8);
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Copy)]
 struct GroupPreference(pub u8);
 
-fn parse_preferences(raw_preferences: &String, candidates: &CandidateData) -> Vec<CandidateIndex> {
+fn parse_preferences(raw_preferences: &String, candidates: &CandidateData) -> Option<Vec<CandidateIndex>> {
     let ticket_count = candidates.tickets.len();
 
     let mut atl_buf: Vec<(GroupPreference, GroupIndex)> = Vec::with_capacity(ticket_count);
@@ -75,7 +75,7 @@ fn parse_preferences(raw_preferences: &String, candidates: &CandidateData) -> Ve
 
     // if we have at least six BTL prefrences, we have a valid form
     if form_buf.len() >= 6 {
-        return form_buf.clone();
+        return None; // form_buf.clone();
     }
 
     // we don't have a valid BTL form, validate and expand above-the-line
@@ -100,29 +100,17 @@ fn parse_preferences(raw_preferences: &String, candidates: &CandidateData) -> Ve
         form_buf.extend(&candidates.tickets[group_index.0 as usize]);
     }
 
-    assert!(form_buf.len() > 0);
+    if form_buf.len() == 0 {
+        return None;
+    }
 
-    return form_buf;
+    return Some(form_buf);
 }
 
 pub fn load(filename: &str, candidates: &CandidateData) -> Result<Vec<BallotState>, Box<Error>> {
     let f = File::open(filename)?;
     let gf = flate2::read::GzDecoder::new(f);
     let mut rdr = csv::Reader::from_reader(gf);
-    let hunk_size = 1024;
-
-    let mut work_buf = Vec::new();
-
-    let process = |w: &mut Vec<String>, r: &mut HashMap<Vec<CandidateIndex>, u32>| {
-        let partial: Vec<Vec<CandidateIndex>> = w.par_iter()
-            .map(|p| parse_preferences(p, candidates))
-            .collect();
-        for form in partial.iter() {
-            let counter = r.entry(form.clone()).or_insert(0);
-            *counter += 1;
-        }
-        w.clear();
-    };
 
     let mut keys: HashMap<Vec<CandidateIndex>, u32> = HashMap::new();
     for (idx, result) in rdr.deserialize().enumerate() {
@@ -130,13 +118,15 @@ pub fn load(filename: &str, candidates: &CandidateData) -> Result<Vec<BallotStat
             continue;
         }
         let record: AECFormalPreferencesRow = result?;
-        work_buf.push(record.preferences);
-
-        if work_buf.len() >= hunk_size {
-            process(&mut work_buf, &mut keys);
+        let prefs = parse_preferences(&record.preferences, candidates);
+        match prefs {
+            Some(form) => {
+                let counter = keys.entry(form.clone()).or_insert(0);
+                *counter += 1;
+            }
+            None => {}
         }
     }
-    process(&mut work_buf, &mut keys);
 
     let r = keys.drain()
         .map(|(form, count)| BallotState {
