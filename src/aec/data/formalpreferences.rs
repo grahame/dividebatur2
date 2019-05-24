@@ -27,7 +27,7 @@ struct CandidatePreference(pub u8);
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Copy)]
 struct GroupPreference(pub u8);
 
-fn parse_preferences(raw_preferences: &String, candidates: &CandidateData) -> Vec<CandidateIndex> {
+fn parse_preferences(raw_preferences: &str, candidates: &CandidateData) -> Vec<CandidateIndex> {
     let ticket_count = candidates.tickets.len();
 
     let mut atl_buf: Vec<(GroupPreference, GroupIndex)> = Vec::with_capacity(ticket_count);
@@ -35,7 +35,7 @@ fn parse_preferences(raw_preferences: &String, candidates: &CandidateData) -> Ve
         Vec::with_capacity(candidates.count);
     let mut form_buf: Vec<CandidateIndex> = Vec::with_capacity(candidates.count);
 
-    for (pref_idx, pref_str) in raw_preferences.split(",").enumerate() {
+    for (pref_idx, pref_str) in raw_preferences.split(',').enumerate() {
         let pref_v: u8 = if pref_str == "" {
             continue;
         } else if pref_str == "*" || pref_str == "/" {
@@ -100,9 +100,9 @@ fn parse_preferences(raw_preferences: &String, candidates: &CandidateData) -> Ve
         form_buf.extend(&candidates.tickets[group_index.0 as usize]);
     }
 
-    assert!(form_buf.len() > 0);
+    assert!(!form_buf.is_empty());
 
-    return form_buf;
+    form_buf
 }
 
 pub fn load(filename: &str, candidates: &CandidateData) -> Result<Vec<BallotState>, Box<Error>> {

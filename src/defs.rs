@@ -25,6 +25,7 @@ pub struct BallotState {
     pub active_preference: usize,
 }
 
+#[derive(Default)]
 pub struct CountResults {
     elected: Vec<CandidateIndex>,
     excluded: Vec<CandidateIndex>,
@@ -62,7 +63,7 @@ impl CountResults {
         self.inactive.insert(candidate);
     }
 
-    pub fn candidate_is_inactive(&self, candidate: &CandidateIndex) -> bool {
+    pub fn candidate_is_inactive(&self, candidate: CandidateIndex) -> bool {
         self.inactive.contains(&candidate)
     }
 }
@@ -80,12 +81,12 @@ impl BallotState {
         }
     }
 
-    pub fn to_next_preference(&mut self, results: &CountResults) {
+    pub fn goto_next_preference(&mut self, results: &CountResults) {
         loop {
             self.active_preference += 1;
             match self.current_preference() {
                 Some(candidate) => {
-                    if !results.candidate_is_inactive(&candidate) {
+                    if !results.candidate_is_inactive(candidate) {
                         break;
                     }
                 }
@@ -102,6 +103,7 @@ impl BallotState {
 // represents the integer value of the votes transferred to the
 // candidate, after the application of the transfer value to the
 // total number of papers in the transaction
+#[derive(Debug)]
 pub struct BundleTransaction {
     pub ballot_states: Vec<BallotState>,
     pub transfer_value: BigRational,
@@ -117,7 +119,7 @@ pub struct CandidateData {
 }
 
 impl CandidateData {
-    pub fn vec_names(&self, candidates: &Vec<CandidateIndex>) -> String {
+    pub fn vec_names(&self, candidates: &[CandidateIndex]) -> String {
         let names: Vec<String> = candidates.iter().map(|c| self.get_name(*c)).collect();
         names.join("; ")
     }
@@ -125,9 +127,9 @@ impl CandidateData {
 
 impl CandidateData {
     pub fn get_name(&self, idx: CandidateIndex) -> String {
-        return self.names[idx.0 as usize].clone();
+        self.names[idx.0 as usize].clone()
     }
     pub fn get_party(&self, idx: CandidateIndex) -> String {
-        return self.parties[idx.0 as usize].clone();
+        self.parties[idx.0 as usize].clone()
     }
 }

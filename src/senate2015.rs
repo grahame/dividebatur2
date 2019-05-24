@@ -33,9 +33,9 @@ pub fn load_candidate_data(
     }
     CandidateData {
         count: candidates.len(),
-        names: names,
-        parties: parties,
-        tickets: tickets,
+        names,
+        parties,
+        tickets,
     }
 }
 
