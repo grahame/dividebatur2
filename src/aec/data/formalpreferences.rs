@@ -35,7 +35,10 @@ fn parse_preferences(raw_preferences: &str, candidates: &CandidateData) -> Vec<C
         Vec::with_capacity(candidates.count);
     let mut form_buf: Vec<CandidateIndex> = Vec::with_capacity(candidates.count);
 
-    for (pref_idx, pref_str) in raw_preferences.split(',').enumerate() {
+    let mut split = raw_preferences.split(',');
+
+    for i in 0..ticket_count {
+        let pref_str = split.next().unwrap();
         let pref_v: u8 = if pref_str == "" {
             continue;
         } else if pref_str == "*" || pref_str == "/" {
@@ -43,15 +46,22 @@ fn parse_preferences(raw_preferences: &str, candidates: &CandidateData) -> Vec<C
         } else {
             pref_str.parse::<u8>().unwrap()
         };
+        atl_buf.push((GroupPreference(pref_v), GroupIndex(i as u8)));
+    }
 
-        if pref_idx < ticket_count {
-            atl_buf.push((GroupPreference(pref_v), GroupIndex(pref_idx as u8)));
+    for (i, pref_str) in split.enumerate() {
+        let pref_v: u8 = if pref_str == "" {
+            continue;
+        } else if pref_str == "*" || pref_str == "/" {
+            1
         } else {
-            btl_buf.push((
-                CandidatePreference(pref_v),
-                CandidateIndex((pref_idx - ticket_count) as u8),
-            ));
-        }
+            pref_str.parse::<u8>().unwrap()
+        };
+        btl_buf.push((
+            CandidatePreference(pref_v),
+            CandidateIndex(i as u8),
+        ));
+
     }
 
     // Validate below-the-line preferences. If these are valid, they take
