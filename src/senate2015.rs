@@ -39,9 +39,7 @@ pub fn load_candidate_data(
     }
 }
 
-fn run_state(state: &str, vacancies: u32) {
-    println!(" -- LOAD: {}", state);
-
+fn run_state(state: &str, vacancies: usize) {
     let candidates = match aec::data::candidates::load(
         "dividebatur-aec/fed2016/common/aec-senate-candidateinformation-20499.csv",
         state,
@@ -52,19 +50,12 @@ fn run_state(state: &str, vacancies: u32) {
         }
     };
     let cd = load_candidate_data(candidates);
-
     let prefpath = format!(
         "dividebatur-aec/fed2016/{}/data/aec-senate-formalpreferences-20499-{}.csv.gz",
         state.to_ascii_lowercase(),
         state.to_ascii_uppercase()
     );
-
-    let ballot_states = match aec::data::formalpreferences::load(&prefpath[..], &cd) {
-        Ok(data) => data,
-        Err(error) => {
-            panic!("Couldn't read formal preferences file: {:?}", error);
-        }
-    };
+    let ballot_states = aec::data::formalpreferences::read_file(&prefpath, &cd.tickets, cd.count);
 
     println!(
         "{} unique bundle states at commencement of count.",
@@ -73,7 +64,7 @@ fn run_state(state: &str, vacancies: u32) {
 
     let mut automation = VecDeque::new();
     automation.push_back(0);
-    let mut engine = CountEngine::new(vacancies, cd, ballot_states, automation);
+    let mut engine = CountEngine::new(vacancies as u32, cd, ballot_states, automation);
     while {
         let outcome = engine.count();
         match outcome {
