@@ -143,8 +143,6 @@ pub fn read_file(filename: &str, tickets: &[Vec<CandidateIndex>], candidates: us
     let mut rdr = csv::Reader::from_reader(gf);
     let mut form_counter: HashMap<ResolvedPrefs, u32> = HashMap::new();
 
-    println!("{}", filename);
-
     // skip the first line!
     let mut it = rdr.deserialize();
     it.next();
@@ -186,11 +184,6 @@ mod tests {
         let mut btl_buf: Vec<BTLPref> = Vec::new();
 
         parse_line(&line, &mut atl_buf, &mut btl_buf, tickets);
-        println!();
-        println!("     line: {}", line);
-        println!("      btl: {:?}", btl_buf);
-        println!("      atl: {:?}", atl_buf);
-        println!();
         assert!(*atl_expected == atl_buf);
         assert!(*btl_expected == btl_buf);
     }
