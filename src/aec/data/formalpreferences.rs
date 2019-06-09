@@ -8,13 +8,10 @@ extern crate flate2;
 
 use std::fs::File;
 use std::collections::HashMap;
+use std::io::BufReader;
+use std::io::BufRead;
 use std::iter;
 use defs::*;
-
-#[derive(Debug, Deserialize)]
-struct AECFormalPreferencesRow {
-    #[serde(rename = "Preferences")] preferences: String,
-}
 
 // a voter's numerical preference for a candidate
 // if valid, it ranges from 1..N where N is the number of candidates
@@ -140,24 +137,21 @@ fn expand(atl_buf: &[ATLPref], btl_buf: &Vec<BTLPref>, mut form_buf: &mut Resolv
 pub fn read_file(filename: &str, tickets: &[Vec<CandidateIndex>], candidates: usize) -> Vec<BallotState> {
     let f = File::open(filename).unwrap();
     let gf = flate2::read::GzDecoder::new(f);
-    let mut rdr = csv::Reader::from_reader(gf);
+    let rdr = BufReader::new(gf);
     let mut form_counter: HashMap<ResolvedPrefs, u32> = HashMap::new();
-
-    // skip the first line!
-    let mut it = rdr.deserialize();
-    it.next();
 
     let mut atl_buf: Vec<ATLPref> = Vec::with_capacity(tickets.len());
     let mut btl_buf: Vec<BTLPref> = Vec::with_capacity(candidates);
 
-    for entry in it {
+    for r in rdr.lines().skip(2) {
         atl_buf.clear();
         btl_buf.clear();
 
-        let row: AECFormalPreferencesRow = entry.unwrap();
-        let mut form_buf: ResolvedPrefs = Vec::with_capacity(candidates);
+        let line = r.unwrap();
+        let pref: &str = &line[(line.find("\"").unwrap() + 1)..line.len() - 1];
 
-        parse_line(&row.preferences, &mut atl_buf, &mut btl_buf, tickets.len());
+        let mut form_buf: ResolvedPrefs = Vec::with_capacity(candidates);
+        parse_line(pref, &mut atl_buf, &mut btl_buf, tickets.len());
         expand(&atl_buf, &btl_buf, &mut form_buf, tickets);
         assert!(!form_buf.is_empty());
 
