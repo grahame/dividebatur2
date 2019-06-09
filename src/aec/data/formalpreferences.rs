@@ -148,7 +148,7 @@ pub fn read_file(filename: &str, tickets: &[Vec<CandidateIndex>], candidates: us
         btl_buf.clear();
 
         let line = r.unwrap();
-        let pref: &str = &line[(line.find("\"").unwrap() + 1)..line.len() - 1];
+        let pref: &str = &line[(line.find('\"').unwrap() + 1)..line.len() - 1];
 
         let mut form_buf: ResolvedPrefs = Vec::with_capacity(candidates);
         parse_line(pref, &mut atl_buf, &mut btl_buf, tickets.len());
