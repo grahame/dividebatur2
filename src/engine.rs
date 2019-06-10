@@ -1,9 +1,9 @@
-use std::collections::{HashMap, HashSet, VecDeque};
 use defs::*;
+use num::rational::Ratio;
 use num::BigInt;
 use num::{FromPrimitive, ToPrimitive};
-use num::rational::Ratio;
 use rayon::prelude::*;
+use std::collections::{HashMap, HashSet, VecDeque};
 
 #[derive(Debug)]
 pub enum CountOutcome {
@@ -87,7 +87,8 @@ impl CountEngine {
             v.push(ballot_state);
         }
         for (candidate_id, ballot_states) in by_candidate.drain() {
-            let t = self.candidate_bundle_transactions
+            let t = self
+                .candidate_bundle_transactions
                 .entry(candidate_id)
                 .or_insert_with(CandidateBundleTransactions::new);
             let papers = ballot_states.iter().map(|bs| bs.count).sum();
@@ -168,7 +169,8 @@ impl CountEngine {
         println!("Total papers: {}", self.total_papers);
         println!("Quota: {}", self.quota);
         println!("Candidate totals:");
-        let mut cbt: Vec<(&CandidateIndex, (u32, u32))> = self.candidate_bundle_transactions
+        let mut cbt: Vec<(&CandidateIndex, (u32, u32))> = self
+            .candidate_bundle_transactions
             .iter()
             .map(|a| (a.0, (a.1.total_votes(), a.1.total_papers())))
             .collect();
@@ -268,7 +270,8 @@ impl CountEngine {
         candidate: CandidateIndex,
         transfer_value: Ratio<BigInt>,
     ) {
-        let bundles_to_distribute = self.candidate_bundle_transactions
+        let bundles_to_distribute = self
+            .candidate_bundle_transactions
             .remove(&candidate)
             .unwrap()
             .0;
@@ -280,7 +283,8 @@ impl CountEngine {
         candidate: CandidateIndex,
         transfer_value: Ratio<BigInt>,
     ) {
-        let current_bundles = self.candidate_bundle_transactions
+        let current_bundles = self
+            .candidate_bundle_transactions
             .remove(&candidate)
             .unwrap()
             .0;
@@ -444,8 +448,7 @@ impl CountEngine {
             if continuing_candidates.len() == 2 {
                 let a = continuing_candidates[0];
                 let b = continuing_candidates[1];
-                if count_state.votes_per_candidate[&a] == count_state.votes_per_candidate[&b]
-                {
+                if count_state.votes_per_candidate[&a] == count_state.votes_per_candidate[&b] {
                     panic!("Must manually choose for tie on last spot.");
                 } else {
                     self.elect(b, &count_state);

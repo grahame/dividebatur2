@@ -6,12 +6,12 @@
 extern crate csv;
 extern crate flate2;
 
-use std::fs::File;
-use std::collections::HashMap;
-use std::io::BufReader;
-use std::io::BufRead;
-use std::iter;
 use defs::*;
+use std::collections::HashMap;
+use std::fs::File;
+use std::io::BufRead;
+use std::io::BufReader;
+use std::iter;
 
 // a voter's numerical preference for a candidate
 // if valid, it ranges from 1..N where N is the number of candidates
@@ -48,9 +48,7 @@ fn parse_line(prefs: &str, atl_buf: &mut Vec<ATLPref>, btl_buf: &mut Vec<BTLPref
         let n = it.next();
         let mut eol = false;
         let term = match n {
-            Some(c) => {
-                c == b','
-            },
+            Some(c) => c == b',',
             None => {
                 eol = true;
                 true
@@ -60,9 +58,7 @@ fn parse_line(prefs: &str, atl_buf: &mut Vec<ATLPref>, btl_buf: &mut Vec<BTLPref
             if upto - from > 0 {
                 let pref = pref_to_u8(&prefs[from..upto]);
                 if field < tickets {
-                    atl_buf.push((
-                        GroupPreference(pref),
-                        GroupIndex(field as u8)));
+                    atl_buf.push((GroupPreference(pref), GroupIndex(field as u8)));
                 } else {
                     btl_buf.push((
                         CandidatePreference(pref),
@@ -123,7 +119,12 @@ fn expand_atl(atl_buf: &[ATLPref], form_buf: &mut ResolvedPrefs, tickets: &[Vec<
     }
 }
 
-fn expand(atl_buf: &[ATLPref], btl_buf: &Vec<BTLPref>, mut form_buf: &mut ResolvedPrefs, tickets: &[Vec<CandidateIndex>]) {
+fn expand(
+    atl_buf: &[ATLPref],
+    btl_buf: &Vec<BTLPref>,
+    mut form_buf: &mut ResolvedPrefs,
+    tickets: &[Vec<CandidateIndex>],
+) {
     // if we have at least six BTL prefrences, we have a valid form
     expand_btl(&btl_buf, &mut form_buf);
     if form_buf.len() < 6 {
@@ -134,10 +135,12 @@ fn expand(atl_buf: &[ATLPref], btl_buf: &Vec<BTLPref>, mut form_buf: &mut Resolv
     }
 }
 
-pub fn read_file(filename: &str, tickets: &[Vec<CandidateIndex>], candidates: usize) -> Vec<BallotState> {
-    let f = File::open(filename).unwrap();
-    let gf = flate2::read::GzDecoder::new(f);
-    let rdr = BufReader::new(gf);
+fn process_fd(
+    fd: impl std::io::Read,
+    tickets: &[Vec<CandidateIndex>],
+    candidates: usize,
+) -> Vec<BallotState> {
+    let rdr = BufReader::new(fd);
     let mut form_counter: HashMap<ResolvedPrefs, u32> = HashMap::new();
 
     let mut atl_buf: Vec<ATLPref> = Vec::with_capacity(tickets.len());
@@ -159,7 +162,8 @@ pub fn read_file(filename: &str, tickets: &[Vec<CandidateIndex>], candidates: us
         *counter += 1;
     }
 
-    let v: Vec<BallotState> = form_counter.drain()
+    let v: Vec<BallotState> = form_counter
+        .drain()
         .map(|(form, count)| BallotState {
             form,
             count,
@@ -169,11 +173,26 @@ pub fn read_file(filename: &str, tickets: &[Vec<CandidateIndex>], candidates: us
     v
 }
 
+pub fn read_file(
+    filename: &str,
+    tickets: &[Vec<CandidateIndex>],
+    candidates: usize,
+) -> Vec<BallotState> {
+    let f = File::open(filename).unwrap();
+    let gf = flate2::read::GzDecoder::new(f);
+    process_fd(gf, tickets, candidates)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
 
-    fn parse_prefstring(tickets: usize, line: &str, atl_expected: &Vec<ATLPref>, btl_expected: &Vec<BTLPref>) {
+    fn parse_prefstring(
+        tickets: usize,
+        line: &str,
+        atl_expected: &Vec<ATLPref>,
+        btl_expected: &Vec<BTLPref>,
+    ) {
         let mut atl_buf: Vec<ATLPref> = Vec::new();
         let mut btl_buf: Vec<BTLPref> = Vec::new();
 
@@ -188,7 +207,8 @@ mod tests {
             (GroupPreference(1), GroupIndex(1)),
             (GroupPreference(2), GroupIndex(0)),
             (GroupPreference(3), GroupIndex(2)),
-        ].to_vec();
+        ]
+        .to_vec();
         let btl: Vec<BTLPref> = [].to_vec();
 
         parse_prefstring(3, &String::from("2,1,3,,,"), &atl, &btl);
@@ -196,13 +216,12 @@ mod tests {
 
     #[test]
     fn prefstring_atl_and_btl() {
-        let atl: Vec<ATLPref> = [
-            (GroupPreference(1), GroupIndex(2)),
-        ].to_vec();
+        let atl: Vec<ATLPref> = [(GroupPreference(1), GroupIndex(2))].to_vec();
         let btl: Vec<BTLPref> = [
             (CandidatePreference(1), CandidateIndex(12)),
             (CandidatePreference(2), CandidateIndex(11)),
-        ].to_vec();
+        ]
+        .to_vec();
 
         parse_prefstring(3, &String::from(",,1,,,,,,,,,,,,2,1"), &atl, &btl);
     }
@@ -213,7 +232,8 @@ mod tests {
             (GroupPreference(1), GroupIndex(0)),
             (GroupPreference(2), GroupIndex(1)),
             (GroupPreference(3), GroupIndex(2)),
-        ].to_vec();
+        ]
+        .to_vec();
         let btl: Vec<BTLPref> = [
             (CandidatePreference(1), CandidateIndex(0)),
             (CandidatePreference(2), CandidateIndex(1)),
@@ -227,9 +247,15 @@ mod tests {
             (CandidatePreference(10), CandidateIndex(9)),
             (CandidatePreference(11), CandidateIndex(10)),
             (CandidatePreference(12), CandidateIndex(11)),
-        ].to_vec();
+        ]
+        .to_vec();
 
-        parse_prefstring(3, &String::from("1,2,3,1,2,3,4,5,6,7,8,9,10,11,12"), &atl, &btl);
+        parse_prefstring(
+            3,
+            &String::from("1,2,3,1,2,3,4,5,6,7,8,9,10,11,12"),
+            &atl,
+            &btl,
+        );
     }
 
     #[test]
@@ -239,7 +265,8 @@ mod tests {
             (CandidatePreference(1), CandidateIndex(1)),
             (CandidatePreference(2), CandidateIndex(0)),
             (CandidatePreference(3), CandidateIndex(2)),
-        ].to_vec();
+        ]
+        .to_vec();
 
         parse_prefstring(3, &String::from(",,,2,1,3"), &atl, &btl);
     }
@@ -250,20 +277,29 @@ mod tests {
             (GroupPreference(1), GroupIndex(1)),
             (GroupPreference(2), GroupIndex(0)),
             (GroupPreference(3), GroupIndex(2)),
-        ].to_vec();
+        ]
+        .to_vec();
         let tickets: &Vec<Vec<CandidateIndex>> = &[
             [CandidateIndex(0), CandidateIndex(1)].to_vec(),
             [CandidateIndex(2)].to_vec(),
             [CandidateIndex(3), CandidateIndex(4), CandidateIndex(5)].to_vec(),
-        ].to_vec();
+        ]
+        .to_vec();
 
         let mut form_buf = Vec::new();
         expand_atl(&atl, &mut form_buf, &tickets);
-        assert!(form_buf == [
-            CandidateIndex(2),
-            CandidateIndex(0), CandidateIndex(1),
-            CandidateIndex(3), CandidateIndex(4), CandidateIndex(5),
-        ].to_vec());
+        assert!(
+            form_buf
+                == [
+                    CandidateIndex(2),
+                    CandidateIndex(0),
+                    CandidateIndex(1),
+                    CandidateIndex(3),
+                    CandidateIndex(4),
+                    CandidateIndex(5),
+                ]
+                .to_vec()
+        );
     }
 
     #[test]
@@ -282,18 +318,18 @@ mod tests {
             (GroupPreference(1), GroupIndex(1)),
             (GroupPreference(3), GroupIndex(0)),
             (GroupPreference(4), GroupIndex(2)),
-        ].to_vec();
+        ]
+        .to_vec();
         let tickets: &Vec<Vec<CandidateIndex>> = &[
             [CandidateIndex(0), CandidateIndex(1)].to_vec(),
             [CandidateIndex(2)].to_vec(),
             [CandidateIndex(3), CandidateIndex(4), CandidateIndex(5)].to_vec(),
-        ].to_vec();
+        ]
+        .to_vec();
 
         let mut form_buf = Vec::new();
         expand_atl(&atl, &mut form_buf, &tickets);
-        assert!(form_buf == [
-            CandidateIndex(2),
-        ].to_vec());
+        assert!(form_buf == [CandidateIndex(2),].to_vec());
     }
 
     #[test]
@@ -302,18 +338,18 @@ mod tests {
             (GroupPreference(1), GroupIndex(1)),
             (GroupPreference(2), GroupIndex(0)),
             (GroupPreference(2), GroupIndex(2)),
-        ].to_vec();
+        ]
+        .to_vec();
         let tickets: &Vec<Vec<CandidateIndex>> = &[
             [CandidateIndex(0), CandidateIndex(1)].to_vec(),
             [CandidateIndex(2)].to_vec(),
             [CandidateIndex(3), CandidateIndex(4), CandidateIndex(5)].to_vec(),
-        ].to_vec();
+        ]
+        .to_vec();
 
         let mut form_buf = Vec::new();
         expand_atl(&atl, &mut form_buf, &tickets);
-        assert!(form_buf == [
-            CandidateIndex(2),
-        ].to_vec());
+        assert!(form_buf == [CandidateIndex(2),].to_vec());
     }
 
     #[test]
@@ -322,7 +358,8 @@ mod tests {
             (CandidatePreference(1), CandidateIndex(1)),
             (CandidatePreference(2), CandidateIndex(0)),
             (CandidatePreference(3), CandidateIndex(2)),
-        ].to_vec();
+        ]
+        .to_vec();
 
         let mut form_buf = Vec::new();
         expand_btl(&btl, &mut form_buf);
@@ -344,7 +381,8 @@ mod tests {
             (CandidatePreference(1), CandidateIndex(1)),
             (CandidatePreference(3), CandidateIndex(0)),
             (CandidatePreference(4), CandidateIndex(2)),
-        ].to_vec();
+        ]
+        .to_vec();
 
         let mut form_buf = Vec::new();
         expand_btl(&btl, &mut form_buf);
@@ -359,7 +397,8 @@ mod tests {
             (CandidatePreference(3), CandidateIndex(0)),
             (CandidatePreference(3), CandidateIndex(5)),
             (CandidatePreference(4), CandidateIndex(2)),
-        ].to_vec();
+        ]
+        .to_vec();
 
         let mut form_buf = Vec::new();
         expand_btl(&btl, &mut form_buf);
@@ -374,14 +413,14 @@ mod tests {
             (CandidatePreference(2), CandidateIndex(0)),
             (CandidatePreference(3), CandidateIndex(5)),
             (CandidatePreference(4), CandidateIndex(2)),
-        ].to_vec();
+        ]
+        .to_vec();
 
         let mut form_buf = Vec::new();
         expand_btl(&btl, &mut form_buf);
         assert!(form_buf == []);
     }
 
- 
     #[test]
     fn expandbtl_prefdupe_last() {
         let btl: Vec<BTLPref> = [
@@ -390,7 +429,8 @@ mod tests {
             (CandidatePreference(3), CandidateIndex(0)),
             (CandidatePreference(4), CandidateIndex(5)),
             (CandidatePreference(4), CandidateIndex(2)),
-        ].to_vec();
+        ]
+        .to_vec();
 
         let mut form_buf = Vec::new();
         expand_btl(&btl, &mut form_buf);
@@ -399,8 +439,7 @@ mod tests {
 
     #[test]
     fn expand_btlonly() {
-        let atl: Vec<ATLPref> = [
-        ].to_vec();
+        let atl: Vec<ATLPref> = [].to_vec();
         let btl: Vec<BTLPref> = [
             (CandidatePreference(1), CandidateIndex(0)),
             (CandidatePreference(2), CandidateIndex(1)),
@@ -408,35 +447,38 @@ mod tests {
             (CandidatePreference(4), CandidateIndex(3)),
             (CandidatePreference(5), CandidateIndex(4)),
             (CandidatePreference(6), CandidateIndex(5)),
-        ].to_vec();
+        ]
+        .to_vec();
         let tickets: &Vec<Vec<CandidateIndex>> = &[].to_vec();
         let mut form_buf = Vec::new();
         expand(&atl, &btl, &mut form_buf, &tickets);
-        assert!(form_buf == [
-            CandidateIndex(0), CandidateIndex(1),
-            CandidateIndex(2), CandidateIndex(3),
-            CandidateIndex(4), CandidateIndex(5)]);
+        assert!(
+            form_buf
+                == [
+                    CandidateIndex(0),
+                    CandidateIndex(1),
+                    CandidateIndex(2),
+                    CandidateIndex(3),
+                    CandidateIndex(4),
+                    CandidateIndex(5)
+                ]
+        );
     }
 
     #[test]
     fn expand_atlonly() {
-        let atl: Vec<ATLPref> = [
-            (GroupPreference(1), GroupIndex(0)),
-        ].to_vec();
-        let btl: Vec<BTLPref> = [
-        ].to_vec();
-        let tickets: &Vec<Vec<CandidateIndex>> = &[[CandidateIndex(0), CandidateIndex(1)].to_vec()].to_vec();
+        let atl: Vec<ATLPref> = [(GroupPreference(1), GroupIndex(0))].to_vec();
+        let btl: Vec<BTLPref> = [].to_vec();
+        let tickets: &Vec<Vec<CandidateIndex>> =
+            &[[CandidateIndex(0), CandidateIndex(1)].to_vec()].to_vec();
         let mut form_buf = Vec::new();
         expand(&atl, &btl, &mut form_buf, &tickets);
-        assert!(form_buf == [
-            CandidateIndex(0), CandidateIndex(1)]);
+        assert!(form_buf == [CandidateIndex(0), CandidateIndex(1)]);
     }
 
     #[test]
     fn expand_btl_beats_atl() {
-        let atl: Vec<ATLPref> = [
-            (GroupPreference(1), GroupIndex(0)),
-        ].to_vec();
+        let atl: Vec<ATLPref> = [(GroupPreference(1), GroupIndex(0))].to_vec();
         let btl: Vec<BTLPref> = [
             (CandidatePreference(1), CandidateIndex(0)),
             (CandidatePreference(2), CandidateIndex(1)),
@@ -444,28 +486,58 @@ mod tests {
             (CandidatePreference(4), CandidateIndex(3)),
             (CandidatePreference(5), CandidateIndex(4)),
             (CandidatePreference(6), CandidateIndex(5)),
-        ].to_vec();
-        let tickets: &Vec<Vec<CandidateIndex>> = &[[CandidateIndex(0), CandidateIndex(1)].to_vec()].to_vec();
+        ]
+        .to_vec();
+        let tickets: &Vec<Vec<CandidateIndex>> =
+            &[[CandidateIndex(0), CandidateIndex(1)].to_vec()].to_vec();
         let mut form_buf = Vec::new();
         expand(&atl, &btl, &mut form_buf, &tickets);
-        assert!(form_buf == [
-            CandidateIndex(0), CandidateIndex(1),
-            CandidateIndex(2), CandidateIndex(3),
-            CandidateIndex(4), CandidateIndex(5)]);
+        assert!(
+            form_buf
+                == [
+                    CandidateIndex(0),
+                    CandidateIndex(1),
+                    CandidateIndex(2),
+                    CandidateIndex(3),
+                    CandidateIndex(4),
+                    CandidateIndex(5)
+                ]
+        );
     }
 
     #[test]
     fn expand_atl_rescues_btl() {
-        let atl: Vec<ATLPref> = [
-            (GroupPreference(1), GroupIndex(0)),
-        ].to_vec();
-        let btl: Vec<BTLPref> = [
-            (CandidatePreference(1), CandidateIndex(0)),
-        ].to_vec();
-        let tickets: &Vec<Vec<CandidateIndex>> = &[[CandidateIndex(0), CandidateIndex(1)].to_vec()].to_vec();
+        let atl: Vec<ATLPref> = [(GroupPreference(1), GroupIndex(0))].to_vec();
+        let btl: Vec<BTLPref> = [(CandidatePreference(1), CandidateIndex(0))].to_vec();
+        let tickets: &Vec<Vec<CandidateIndex>> =
+            &[[CandidateIndex(0), CandidateIndex(1)].to_vec()].to_vec();
         let mut form_buf = Vec::new();
         expand(&atl, &btl, &mut form_buf, &tickets);
-        assert!(form_buf == [
-            CandidateIndex(0), CandidateIndex(1)]);
+        assert!(form_buf == [CandidateIndex(0), CandidateIndex(1)]);
+    }
+
+    fn stringify_ballotstates(ballot_states: &[BallotState]) -> String {
+        let mut stringed: Vec<String> = ballot_states.iter().map(|x| format!("{:?}", x)).collect();
+        stringed.sort();
+        format!("{:?}", stringed)
+    }
+
+    #[test]
+    fn parse_aec_csv() {
+        let csv_data = r##"ElectorateNm,VoteCollectionPointNm,VoteCollectionPointId,BatchNo,PaperNo,Preferences
+------------,---------------------,---------------------,-------,-------,-----------
+Narnia,Cupboard,1,1,1,"1,2,3,1,2,3,4,5,6"
+Narnia,Cupboard,1,1,1,"1,2,3,1,2,3,4,5,6"
+Middle Earth,Rohan,42,43,1,"1,,,,,,,,"
+"##;
+        let fd = BufReader::new(csv_data.as_bytes());
+        let tickets: &Vec<Vec<CandidateIndex>> = &[
+            [CandidateIndex(0), CandidateIndex(1)].to_vec(),
+            [CandidateIndex(2)].to_vec(),
+            [CandidateIndex(3), CandidateIndex(4), CandidateIndex(5)].to_vec(),
+        ]
+        .to_vec();
+        let res = process_fd(fd, tickets, 6);
+        assert!(stringify_ballotstates(&res) == r##"["BallotState { form: [CandidateIndex(0), CandidateIndex(1), CandidateIndex(2), CandidateIndex(3), CandidateIndex(4), CandidateIndex(5)], count: 2, active_preference: 0 }", "BallotState { form: [CandidateIndex(0), CandidateIndex(1)], count: 1, active_preference: 0 }"]"##);
     }
 }

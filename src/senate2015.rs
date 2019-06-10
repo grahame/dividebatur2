@@ -1,6 +1,6 @@
+use aec;
 use defs::*;
 use engine::*;
-use aec;
 use std::collections::VecDeque;
 
 pub fn load_candidate_data(
@@ -56,6 +56,7 @@ fn run_state(state: &str, vacancies: usize) {
         state.to_ascii_uppercase()
     );
     let ballot_states = aec::data::formalpreferences::read_file(&prefpath, &cd.tickets, cd.count);
+    println!("len {}", cd.tickets.len());
 
     println!(
         "{} unique bundle states at commencement of count.",

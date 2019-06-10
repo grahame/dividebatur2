@@ -4,8 +4,8 @@ extern crate rayon;
 extern crate serde_derive;
 
 mod aec;
-mod engine;
 mod defs;
+mod engine;
 mod senate2015;
 
 fn main() {
