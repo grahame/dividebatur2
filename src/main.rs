@@ -1,13 +1,5 @@
-extern crate num;
-extern crate rayon;
-#[macro_use]
-extern crate serde_derive;
-
-mod aec;
-mod defs;
-mod engine;
-mod senate2015;
+extern crate dividebatur;
 
 fn main() {
-    senate2015::run();
+    dividebatur::senate2015::run();
 }
