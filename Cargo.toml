@@ -2,7 +2,7 @@
 name = "dividebatur"
 description = "Single Transferable Vote election result counter"
 version = "0.3.1"
-authors = ["Grahame Bowland <grahame@angrygoats.net>"]
+authors = ["Grahame Bowland <grahame@oreamnos.com.au>"]
 homepage = "https://github.com/grahame/dividebatur2/"
 license = "Apache-2.0"
 exclude = [
