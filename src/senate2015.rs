@@ -1,6 +1,7 @@
 use aec;
 use defs::*;
 use engine::*;
+use rayon::prelude::*;
 use std::collections::VecDeque;
 
 pub fn load_candidate_data(
@@ -39,7 +40,7 @@ pub fn load_candidate_data(
     }
 }
 
-fn run_state(state: &str, vacancies: usize) {
+fn run_state(state: &str, vacancies: usize) -> bool {
     let candidates = match aec::data::candidates::load(
         "dividebatur-aec/fed2016/common/aec-senate-candidateinformation-20499.csv",
         state,
@@ -81,6 +82,7 @@ fn run_state(state: &str, vacancies: usize) {
             }
         }
     } {}
+    true
 }
 
 pub fn run() {
@@ -94,7 +96,5 @@ pub fn run() {
         (12, "VIC"),
         (12, "WA"),
     ];
-    for (vacancies, state) in australia {
-        run_state(state, vacancies);
-    }
+    let success: Vec<bool> = australia.par_iter().map(|(vacancies, state)| run_state(state, *vacancies)).collect();
 }
