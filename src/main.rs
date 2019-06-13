@@ -73,13 +73,11 @@ struct CountTask {
 
 #[derive(Debug)]
 struct Work {
-    counts: Vec<CountTask>
+    counts: Vec<CountTask>,
 }
 
 fn get_counts(input_files: Vec<&str>) -> Work {
-    let mut work = Work {
-        counts: Vec::new(),
-    };
+    let mut work = Work { counts: Vec::new() };
     for fname in input_files {
         println!("-> {}", fname);
         let config = match read_config(fname) {
