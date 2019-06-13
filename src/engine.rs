@@ -6,8 +6,11 @@ use rayon::prelude::*;
 use std::collections::{HashMap, HashSet, VecDeque};
 
 #[derive(Debug)]
+/// the outcome of a count
 pub enum CountOutcome {
+    /// the engine has reached an endpoint
     CountComplete(usize, CountState),
+    /// the engine has not reached an endpoint
     CountContinues(usize, CountState),
 }
 
@@ -20,6 +23,9 @@ enum CountAction {
 }
 
 #[derive(Debug, Clone)]
+/// a summary of the state of the count, after a given count.
+/// referred to when breaking ties for candidate election or
+/// exclusion
 pub struct CountState {
     pub votes_per_candidate: HashMap<CandidateIndex, u32>,
     pub papers_per_candidate: HashMap<CandidateIndex, u32>,
@@ -28,25 +34,28 @@ pub struct CountState {
 }
 
 #[derive(Debug)]
+/// the number of papers and votes exhausted as the result of a distribution
 struct DistributionOutcome {
     votes_exhausted: u32,
     papers_exhausted: u32,
 }
 
+/// Single Transferable Vote count engine
 pub struct CountEngine {
+    pub vacancies: u32,
+    pub total_papers: u32,
+    pub quota: u32,
     candidates: CandidateData,
-    vacancies: u32,
+    /// the `BundleTransaction`s held by each candidate
     candidate_bundle_transactions: HashMap<CandidateIndex, CandidateBundleTransactions>,
-    total_papers: u32,
     count_states: Vec<CountState>,
-    quota: u32,
     results: CountResults,
     actions_pending: VecDeque<CountAction>,
     automation: VecDeque<usize>,
 }
 
-// all bundle transactions held by a candidate, in a given round of the count
 #[derive(Debug)]
+/// all bundle transactions held by a candidate in a given count
 struct CandidateBundleTransactions(Vec<BundleTransaction>);
 
 impl CandidateBundleTransactions {
@@ -62,16 +71,21 @@ impl CandidateBundleTransactions {
 }
 
 impl CountEngine {
+    /// determine the election quota
     fn determine_quota(total_papers: u32, vacancies: u32) -> u32 {
         (total_papers / (vacancies + 1)) + 1
     }
 
+    /// apply transfer value to a number of votes. Rounds down.
     fn apply_transfer_value(transfer_value: &Ratio<BigInt>, votes: u32) -> u32 {
         let v: Ratio<BigInt> = Ratio::from_integer(FromPrimitive::from_u32(votes).unwrap());
         let vr = (transfer_value * v).to_integer();
         ToPrimitive::to_u32(&vr).unwrap()
     }
 
+    /// bundle ballots together based upon the currently active preference. incrementally updates
+    /// `self.candidate_bundle_transactions` with these papers, which must have been removed from
+    /// this structure if they are being distributed as the result of an exclusion or election
     fn bundle_ballot_states(
         &mut self,
         ballot_states: Vec<BallotState>,
@@ -102,6 +116,9 @@ impl CountEngine {
         }
     }
 
+    /// distribute bundle transactions as the result of an election or an exclusion.
+    /// moves the state of each bundle transaction on to the next preference, then
+    /// calls on to `bundle_ballot_states`
     fn distribute_bundle_transactions(
         &mut self,
         bundle_transactions: Vec<BundleTransaction>,
@@ -133,6 +150,14 @@ impl CountEngine {
         }
     }
 
+    /// Create a new STV count engine
+    ///
+    /// # Arguments
+    ///
+    /// * `vacancies` - the number of candidates to elect. For the Australian senate, this is `12` (full) or `6` (half)
+    /// * `candidates` - the candidates running
+    /// * `ballot_states` - the ballots cast
+    /// * `automation` - a queue of automation outcomes
     pub fn new(
         vacancies: u32,
         candidates: CandidateData,
@@ -162,7 +187,7 @@ impl CountEngine {
     #[allow(dead_code)]
     pub fn print_debug(&self) {
         println!(
-            "-- CountEngine::print_debug (round {}) --",
+            "-- CountEngine::print_debug (count {}) --",
             self.count_states.len()
         );
         println!("Candidates: {}", self.candidates.count);
@@ -233,10 +258,6 @@ impl CountEngine {
         if self.results.candidate_is_inactive(candidate) {
             panic!("Election of a candidate who was already excluded or elected.");
         }
-        println!(
-            "Elected candidate: {}",
-            self.candidates.vec_names(&[candidate])
-        );
         self.results.candidate_elected(candidate);
         let candidate_votes = state.votes_per_candidate[&candidate];
         let candidate_papers = state.papers_per_candidate[&candidate];
@@ -306,9 +327,9 @@ impl CountEngine {
     }
 
     fn find_tie_breaker(&self, candidates: &[CandidateIndex]) -> Option<Vec<(CandidateIndex)>> {
-        // look back through previous counts, looking for a round where the votes of each of the candidates
+        // look back through previous counts, looking for a count where the votes of each of the candidates
         // are distinct. if found, returns the candidates in ascending vote order
-        for (idx, count_state) in self.count_states.iter().enumerate().rev().skip(1) {
+        for count_state in self.count_states.iter().rev().skip(1) {
             let mut candidate_votes = Vec::new();
             let mut vote_set = HashSet::new();
             for candidate in candidates {
@@ -317,7 +338,6 @@ impl CountEngine {
                 vote_set.insert(votes);
             }
             if vote_set.len() == candidates.len() {
-                println!("find tie breaker: match found in round {}", idx);
                 candidate_votes.sort_by_key(|&(_, v)| v);
                 return Some(candidate_votes.drain(..).map(|(c, _)| c).collect());
             }
@@ -359,10 +379,6 @@ impl CountEngine {
                 }
             }
         };
-        println!(
-            "exclude_a_candidate: {}",
-            self.candidates.vec_names(&exclusion_candidates)
-        );
 
         self.results.candidate_excluded(to_exclude);
 
@@ -384,31 +400,20 @@ impl CountEngine {
         }
     }
 
+    /// count votes, once (a single count)
     pub fn count(&mut self) -> CountOutcome {
-        println!("-- START ROUND {} --", self.count_states.len() + 1);
-        println!();
-
         let votes_exhausted = 0;
         let papers_exhausted = 0;
 
-        // count votes, once (a single 'round')
         let action = self.actions_pending.pop_front().unwrap();
         match action {
             CountAction::FirstCount => {
                 // we don't need to do anything on the first count
-                println!("Action: first count");
             }
             CountAction::ExclusionDistribution(candidate, transfer_value) => {
-                println!(
-                    "Action: exclusion distribution of papers from candidate {} with transfer value {}",
-                    self.candidates.vec_names(&[candidate]), transfer_value);
                 self.process_exclusion_distribution(candidate, transfer_value);
             }
             CountAction::ElectionDistribution(candidate, transfer_value) => {
-                println!(
-                    "Action: election distribution of candidate {}",
-                    self.candidates.vec_names(&[candidate])
-                );
                 self.process_election_distribution(candidate, transfer_value);
             }
         }
@@ -464,5 +469,23 @@ impl CountEngine {
         }
 
         CountOutcome::CountContinues(self.count_states.len(), count_state)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_apply_transfer_value() {
+        let a: Ratio<BigInt> = Ratio::from_integer(FromPrimitive::from_u32(1).unwrap())
+            / Ratio::from_integer(FromPrimitive::from_u32(3).unwrap());
+        assert!(CountEngine::apply_transfer_value(&a, 0) == 0);
+        assert!(CountEngine::apply_transfer_value(&a, 1) == 0);
+        assert!(CountEngine::apply_transfer_value(&a, 2) == 0);
+        assert!(CountEngine::apply_transfer_value(&a, 3) == 1);
+        assert!(CountEngine::apply_transfer_value(&a, 4) == 1);
+        assert!(CountEngine::apply_transfer_value(&a, 5) == 1);
+        assert!(CountEngine::apply_transfer_value(&a, 6) == 2);
     }
 }

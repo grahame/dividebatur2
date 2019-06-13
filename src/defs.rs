@@ -5,20 +5,19 @@
 use num::rational::BigRational;
 use std::collections::HashSet;
 
-// represents a candidate's index on the ballot paper
-// ranges from 0..N-1 where N is the number of candidates
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Copy, Hash)]
+/// candidate's index on the ballot paper
+/// ranges from `0..N-1` where `N` is the number of candidates
 pub struct CandidateIndex(pub u8);
 
-// represents a group's index on the ballot paper
-// ranges from 0..N-1 where N is the number of groups
+/// group's index on the ballot paper
+/// ranges from `0..N-1` where N is the number of groups
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Copy)]
 pub struct GroupIndex(pub u8);
 
-// one ore more ballots entered into the count, all with the
-// same form, and the current state of those ballots within
-// the count (e.g. the current preference)
 #[derive(Debug)]
+/// `count` ballots in the count, all with the same `form`,
+/// expressing `active_preference`
 pub struct BallotState {
     pub form: Vec<CandidateIndex>,
     pub count: u32,
@@ -98,11 +97,11 @@ impl BallotState {
     }
 }
 
-// a collection of ballot states, all of which were transferred to
-// the total of a candidate during a count. the member `votes`
-// represents the integer value of the votes transferred to the
-// candidate, after the application of the transfer value to the
-// total number of papers in the transaction
+/// a collection of ballot states, all of which were transferred to
+/// the total of a candidate during a count. the member `votes`
+/// represents the integer value of the votes transferred to the
+/// candidate, after the application of the transfer value to the
+/// total number of papers in the transaction
 #[derive(Debug)]
 pub struct BundleTransaction {
     pub ballot_states: Vec<BallotState>,
@@ -111,6 +110,7 @@ pub struct BundleTransaction {
     pub papers: u32,
 }
 
+#[derive(Debug)]
 pub struct CandidateData {
     pub count: usize,
     pub names: Vec<String>,
