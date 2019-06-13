@@ -6,14 +6,14 @@ extern crate toml;
 
 use clap::{App, Arg};
 use serde_derive::Deserialize;
+use std::collections::HashMap;
 use std::fs::File;
 use std::io::Read;
-use std::collections::HashMap;
 
 #[derive(Debug, Deserialize)]
 struct Candidates {
     senate: String,
-    all: String
+    all: String,
 }
 
 #[derive(Debug, Deserialize)]
@@ -29,6 +29,7 @@ struct Tie {
 
 #[derive(Debug, Deserialize)]
 struct Count {
+    method: Option<String>,
     dataset: String,
     description: String,
     vacancies: usize,
@@ -64,15 +65,41 @@ fn read_config(input_file: &str) -> Result<Config, String> {
     Ok(config)
 }
 
-fn run(input_file: &str) {
-    println!("-> {}", input_file);
-    let config = match read_config(input_file) {
-        Ok(c) => c,
-        Err(e) => {
-            println!("{}", e);
-            return;
-        }
+#[derive(Debug)]
+struct CountTask {
+    format: String,
+    slug: String,
+}
+
+#[derive(Debug)]
+struct Work {
+    counts: Vec<CountTask>
+}
+
+fn get_counts(input_files: Vec<&str>) -> Work {
+    let mut work = Work {
+        counts: Vec::new(),
     };
+    for fname in input_files {
+        println!("-> {}", fname);
+        let config = match read_config(fname) {
+            Ok(c) => c,
+            Err(e) => {
+                println!("{}", e);
+                continue;
+            }
+        };
+        let mut new = config
+            .count
+            .iter()
+            .map(|(slug, x)| CountTask {
+                slug: slug.clone(),
+                format: config.format.clone(),
+            })
+            .collect();
+        work.counts.append(&mut new);
+    }
+    work
 }
 
 fn main() {
@@ -88,7 +115,6 @@ fn main() {
         )
         .get_matches();
 
-    for input_file in matches.values_of("INPUT").unwrap() {
-        run(input_file);
-    }
+    let config = get_counts(matches.values_of("INPUT").unwrap().collect());
+    println!("config: {:?}", config);
 }

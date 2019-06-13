@@ -84,20 +84,3 @@ fn run_state(state: &str, vacancies: usize) -> bool {
     } {}
     true
 }
-
-pub fn run() {
-    let australia = vec![
-        (2, "ACT"),
-        (12, "NSW"),
-        (2, "NT"),
-        (12, "QLD"),
-        (12, "SA"),
-        (12, "TAS"),
-        (12, "VIC"),
-        (12, "WA"),
-    ];
-    let success: Vec<bool> = australia
-        .par_iter()
-        .map(|(vacancies, state)| run_state(state, *vacancies))
-        .collect();
-}
