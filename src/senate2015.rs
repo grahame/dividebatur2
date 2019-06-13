@@ -96,5 +96,8 @@ pub fn run() {
         (12, "VIC"),
         (12, "WA"),
     ];
-    let success: Vec<bool> = australia.par_iter().map(|(vacancies, state)| run_state(state, *vacancies)).collect();
+    let success: Vec<bool> = australia
+        .par_iter()
+        .map(|(vacancies, state)| run_state(state, *vacancies))
+        .collect();
 }
