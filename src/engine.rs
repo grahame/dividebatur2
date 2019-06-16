@@ -34,12 +34,12 @@ struct DistributionOutcome {
 }
 
 pub struct CountEngine {
+    pub vacancies: u32,
+    pub total_papers: u32,
+    pub quota: u32,
     candidates: CandidateData,
-    vacancies: u32,
     candidate_bundle_transactions: HashMap<CandidateIndex, CandidateBundleTransactions>,
-    total_papers: u32,
     count_states: Vec<CountState>,
-    quota: u32,
     results: CountResults,
     actions_pending: VecDeque<CountAction>,
     automation: VecDeque<usize>,

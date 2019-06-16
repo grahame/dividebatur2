@@ -7,15 +7,15 @@ extern crate serde_json;
 extern crate toml;
 
 use clap::{App, Arg};
-use dividebatur::engine::*;
-use rayon::prelude::*;
-use std::collections::{VecDeque};
 use dividebatur::configuration::{read_config, CountTask};
+use dividebatur::engine::*;
 use dividebatur::output::{CountOutput, CountOutputWriter};
+use rayon::prelude::*;
+use std::collections::VecDeque;
 
 fn run_task(task: &CountTask) -> Result<bool, String> {
     println!("-> running task: {:?}", task);
-    let output: CountOutput = CountOutputWriter::new(&task.slug);
+    let mut output: CountOutput = CountOutputWriter::new(&task.slug);
     let candidates = match dividebatur::aec::data::candidates::load(&task.candidates, &task.state) {
         Ok(rows) => rows,
         Err(error) => {
@@ -36,6 +36,7 @@ fn run_task(task: &CountTask) -> Result<bool, String> {
     let mut automation = VecDeque::new();
     automation.push_back(0);
     let mut engine = CountEngine::new(task.vacancies as u32, cd, ballot_states, automation);
+    output.set_parameters(&task, &engine);
     while {
         let outcome = engine.count();
         match outcome {
@@ -51,6 +52,7 @@ fn run_task(task: &CountTask) -> Result<bool, String> {
             }
         }
     } {}
+    output.close();
     Ok(true)
 }
 

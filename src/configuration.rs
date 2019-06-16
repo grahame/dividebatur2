@@ -1,7 +1,7 @@
+use std::collections::HashMap;
 use std::fs::File;
-use std::path::Path;
-use std::collections::{HashMap};
 use std::io::Read;
+use std::path::Path;
 
 #[derive(Debug, Deserialize)]
 struct Candidates {
@@ -32,7 +32,8 @@ struct Count {
 }
 
 #[derive(Debug, Deserialize)]
-pub struct Config {
+struct Config {
+    house: String,
     format: String,
     candidates: Candidates,
     dataset: HashMap<String, Dataset>,
@@ -59,6 +60,9 @@ fn config_contents(input_file: &str) -> Result<Config, String> {
 #[derive(Debug)]
 pub struct CountTask {
     pub format: String,
+    pub house: String,
+    pub description: String,
+    pub dataset: String,
     pub state: String,
     pub candidates: String,
     pub preferences: String,
@@ -76,12 +80,7 @@ pub fn read_config(input_files: Vec<&str>) -> Work {
     for fname in input_files {
         let path = Path::new(fname);
         let dir = path.parent().unwrap().canonicalize().unwrap();
-        let in_dir = |s: &str| -> String {
-            dir.join(Path::new(s))
-                .to_str()
-                .unwrap()
-                .to_string()
-        };
+        let in_dir = |s: &str| -> String { dir.join(Path::new(s)).to_str().unwrap().to_string() };
         let config = match config_contents(fname) {
             Ok(c) => c,
             Err(e) => {
@@ -102,6 +101,9 @@ pub fn read_config(input_files: Vec<&str>) -> Work {
                 CountTask {
                     state: slug.clone(),
                     slug: slug.clone(),
+                    house: config.house.clone(),
+                    description: count.description.clone(),
+                    dataset: count.dataset.clone(),
                     candidates: in_dir(&config.candidates.all).clone(),
                     preferences: in_dir(&format!("{}/data/{}", slug, dataset.preferences)),
                     format: config.format.clone(),
