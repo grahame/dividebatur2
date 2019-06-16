@@ -6,8 +6,11 @@ use rayon::prelude::*;
 use std::collections::{HashMap, HashSet, VecDeque};
 
 #[derive(Debug)]
+/// the outcome of a count
 pub enum CountOutcome {
+    /// the engine has reached an endpoint
     CountComplete(usize, CountState),
+    /// the engine has not reached an endpoint
     CountContinues(usize, CountState),
 }
 
@@ -20,6 +23,9 @@ enum CountAction {
 }
 
 #[derive(Debug, Clone)]
+/// a summary of the state of the count, after a given
+/// round of counting. referred to when breaking ties
+/// for candidate election of exclusion
 pub struct CountState {
     pub votes_per_candidate: HashMap<CandidateIndex, u32>,
     pub papers_per_candidate: HashMap<CandidateIndex, u32>,
@@ -33,6 +39,7 @@ struct DistributionOutcome {
     papers_exhausted: u32,
 }
 
+/// Single Transferable Vote count engine
 pub struct CountEngine {
     pub vacancies: u32,
     pub total_papers: u32,
@@ -62,10 +69,12 @@ impl CandidateBundleTransactions {
 }
 
 impl CountEngine {
+    /// determine the election quota
     fn determine_quota(total_papers: u32, vacancies: u32) -> u32 {
         (total_papers / (vacancies + 1)) + 1
     }
 
+    /// apply transfer value to a number of votes. Rounds down.
     fn apply_transfer_value(transfer_value: &Ratio<BigInt>, votes: u32) -> u32 {
         let v: Ratio<BigInt> = Ratio::from_integer(FromPrimitive::from_u32(votes).unwrap());
         let vr = (transfer_value * v).to_integer();
@@ -133,6 +142,14 @@ impl CountEngine {
         }
     }
 
+    /// Create a new STV count engine
+    ///
+    /// # Arguments
+    ///
+    /// * `vacancies` - the number of candidates to elect. For the Australian senate, this is `12` (full) or `6` (half)
+    /// * `candidates` - the candidates running
+    /// * `ballot_states` - the ballots cast
+    /// * `automation` - a queue of automation outcomes
     pub fn new(
         vacancies: u32,
         candidates: CandidateData,
