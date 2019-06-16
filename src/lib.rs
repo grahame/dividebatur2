@@ -8,3 +8,4 @@ pub mod aec;
 pub mod defs;
 pub mod engine;
 pub mod senate2015;
+pub mod configuration;
