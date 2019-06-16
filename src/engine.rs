@@ -466,3 +466,22 @@ impl CountEngine {
         CountOutcome::CountContinues(self.count_states.len(), count_state)
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_apply_transfer_value() {
+        let a: Ratio<BigInt> = Ratio::from_integer(FromPrimitive::from_u32(1).unwrap())
+            / Ratio::from_integer(FromPrimitive::from_u32(3).unwrap());
+        println!("{:?}", CountEngine::apply_transfer_value(&a, 1));
+        assert!(CountEngine::apply_transfer_value(&a, 0) == 0);
+        assert!(CountEngine::apply_transfer_value(&a, 1) == 0);
+        assert!(CountEngine::apply_transfer_value(&a, 2) == 0);
+        assert!(CountEngine::apply_transfer_value(&a, 3) == 1);
+        assert!(CountEngine::apply_transfer_value(&a, 4) == 1);
+        assert!(CountEngine::apply_transfer_value(&a, 5) == 1);
+        assert!(CountEngine::apply_transfer_value(&a, 6) == 2);
+    }
+}
