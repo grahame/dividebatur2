@@ -1,11 +1,12 @@
 use std::fs::File;
 use engine::{CountEngine};
-use configuration::{CountTask, Work};
+use configuration::{CountGroup, CountTask, Work};
 use std::collections::{HashMap};
 use defs::*;
 
 #[derive(Serialize)]
 struct Parameters {
+    house: String,
     name: String,
     description: String,
     state: String,
@@ -21,10 +22,27 @@ struct Candidate {
     party: String,
 }
 
+#[derive(Serialize)]
 struct Round {
     number: usize,
     note: String,
-    elected: Vec<CandidateIndex>,
+    elected: Vec<u32>,
+}
+
+#[derive(Serialize)]
+struct ElectionSummary {
+
+}
+
+#[derive(Serialize)]
+struct ExclusionSummary {
+
+}
+
+#[derive(Serialize)]
+struct Summary {
+    elected: Vec<ElectionSummary>,
+    excluded: Vec<ExclusionSummary>,
 }
 
 #[derive(Serialize)]
@@ -32,6 +50,8 @@ struct Output {
     parameters: Option<Parameters>,
     candidates: Option<HashMap<usize, Candidate>>,
     parties: Option<HashMap<String, String>>,
+    rounds: Vec<Round>,
+    summary: Summary,
 }
 
 pub struct CountOutput {
@@ -41,7 +61,7 @@ pub struct CountOutput {
 
 pub trait CountOutputWriter {
     fn new(slug: &str) -> Self;
-    fn set_parameters(&mut self, task: &CountTask, engine: &CountEngine);
+    fn set_parameters(&mut self, group: &CountGroup, task: &CountTask, engine: &CountEngine);
     fn set_candidates(&mut self, cd: &CandidateData);
     fn close(&self);
 }
@@ -54,14 +74,20 @@ impl CountOutputWriter for CountOutput {
                 parameters: None,
                 candidates: None,
                 parties: None,
+                rounds: Vec::new(),
+                summary: Summary {
+                    elected: Vec::new(),
+                    excluded: Vec::new(),
+                }
             },
         }
     }
 
-    fn set_parameters(&mut self, task: &CountTask, engine: &CountEngine) {
+    fn set_parameters(&mut self, group: &CountGroup, task: &CountTask, engine: &CountEngine) {
         self.output.parameters = Some(Parameters {
             total_papers: engine.total_papers,
             quota: engine.quota,
+            house: group.house.clone(),
             vacancies: engine.vacancies,
             description: task.description.clone(),
             name: self.slug.clone(),
@@ -102,7 +128,7 @@ struct CountSummary {
 
 
 #[derive(Serialize)]
-struct Summary {
+struct OverallSummary {
     title: String,
     counts: HashMap<usize, CountSummary>,
 }
@@ -119,7 +145,7 @@ pub fn write_summary(work: &Work) {
             state: count.slug.clone()
         });
     }
-    let summary = Summary {
+    let summary = OverallSummary {
         title: group.description.clone(),
         counts: counts,
     };

@@ -7,13 +7,13 @@ extern crate serde_json;
 extern crate toml;
 
 use clap::{App, Arg};
-use dividebatur::configuration::{read_config, CountTask};
+use dividebatur::configuration::{read_config, CountTask, CountGroup};
 use dividebatur::engine::*;
 use dividebatur::output::{CountOutput, CountOutputWriter, write_summary};
 use rayon::prelude::*;
 use std::collections::VecDeque;
 
-fn run_task(task: &CountTask) -> Result<bool, String> {
+fn run_task(group: &CountGroup, task: &CountTask) -> Result<bool, String> {
     println!("-> running task: {:?}", task);
     let mut output: CountOutput = CountOutputWriter::new(&task.slug);
     let candidates = match dividebatur::aec::data::candidates::load(&task.candidates, &task.state) {
@@ -37,7 +37,7 @@ fn run_task(task: &CountTask) -> Result<bool, String> {
     let mut automation = VecDeque::new();
     automation.push_back(0);
     let mut engine = CountEngine::new(task.vacancies as u32, cd, ballot_states, automation);
-    output.set_parameters(&task, &engine);
+    output.set_parameters(&group, &task, &engine);
     while {
         let outcome = engine.count();
         match outcome {
@@ -72,15 +72,13 @@ fn main() {
 
     let work = read_config(matches.values_of("INPUT").unwrap().collect());
     write_summary(&work);
-    let mut counts = Vec::new();
     for group in work.groups {
-        counts.append(&mut group.counts.clone());
+        let _x: Vec<_> = group.counts
+            .par_iter()
+            .map(|task| {
+                let r = run_task(&group, task);
+                println!("{}/{:?} -> {:?}", group.description, task, r);
+            })
+            .collect();
     }
-    let _x: Vec<_> = counts
-        .par_iter()
-        .map(|x| {
-            let r = run_task(x);
-            println!("{:?} -> {:?}", x, r);
-        })
-        .collect();
 }
