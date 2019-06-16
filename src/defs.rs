@@ -111,6 +111,7 @@ pub struct BundleTransaction {
     pub papers: u32,
 }
 
+#[derive(Debug)]
 pub struct CandidateData {
     pub count: usize,
     pub names: Vec<String>,

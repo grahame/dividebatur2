@@ -6,12 +6,13 @@ extern crate serde_derive;
 extern crate toml;
 
 use clap::{App, Arg};
+use dividebatur::engine::*;
 use rayon::prelude::*;
 use serde_derive::Deserialize;
 use std::collections::{HashMap, VecDeque};
 use std::fs::File;
 use std::io::Read;
-use dividebatur::engine::*;
+use std::path::Path;
 
 #[derive(Debug, Deserialize)]
 struct Candidates {
@@ -63,8 +64,6 @@ fn read_config(input_file: &str) -> Result<Config, String> {
         Err(e) => return Err(format!("unable to parse {}: {}", input_file, e)),
     };
 
-    println!("{:?}", config);
-
     Ok(config)
 }
 
@@ -86,7 +85,14 @@ struct Work {
 fn get_counts(input_files: Vec<&str>) -> Work {
     let mut work = Work { counts: Vec::new() };
     for fname in input_files {
-        println!("-> {}", fname);
+        let path = Path::new(fname);
+        let dir = path.parent().unwrap().canonicalize().unwrap();
+        let in_dir = |s: &str| -> String {
+            dir.join(Path::new(s))
+                .to_str()
+                .unwrap()
+                .to_string()
+        };
         let config = match read_config(fname) {
             Ok(c) => c,
             Err(e) => {
@@ -106,12 +112,13 @@ fn get_counts(input_files: Vec<&str>) -> Work {
                 };
                 CountTask {
                     state: slug.clone(),
-                slug: slug.clone(),
-                candidates: config.candidates.all.clone(),
-                preferences: dataset.preferences.clone(),
-                format: config.format.clone(),
-                vacancies: count.vacancies,
-            }})
+                    slug: slug.clone(),
+                    candidates: in_dir(&config.candidates.all).clone(),
+                    preferences: in_dir(&format!("{}/data/{}", slug, dataset.preferences)),
+                    format: config.format.clone(),
+                    vacancies: count.vacancies,
+                }
+            })
             .collect();
         work.counts.append(&mut new);
     }
@@ -119,6 +126,7 @@ fn get_counts(input_files: Vec<&str>) -> Work {
 }
 
 fn run_task(task: &CountTask) -> Result<bool, String> {
+    println!("-> running task: {:?}", task);
     let candidates = match dividebatur::aec::data::candidates::load(&task.candidates, &task.state) {
         Ok(rows) => rows,
         Err(error) => {
@@ -130,7 +138,6 @@ fn run_task(task: &CountTask) -> Result<bool, String> {
     let prefpath = &task.preferences;
     let ballot_states =
         dividebatur::aec::data::formalpreferences::read_file(prefpath, &cd.tickets, cd.count);
-    println!("len {}", cd.tickets.len());
 
     println!(
         "{} unique bundle states at commencement of count.",

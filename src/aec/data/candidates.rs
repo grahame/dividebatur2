@@ -43,13 +43,14 @@ pub fn load(filename: &str, state: &str) -> Result<Vec<AECAllCandidateRow>, Box<
     let f = File::open(filename)?;
     let mut rdr = csv::Reader::from_reader(f);
     let mut rows: Vec<AECAllCandidateRow> = Vec::new();
+    let state = state.to_lowercase();
     for result in rdr.deserialize() {
         let record: AECAllCandidateRow = result?;
         // we only want senate nominations
         if record.nom_ty != "S" {
             continue;
         }
-        if record.state_ab != state {
+        if record.state_ab.to_lowercase() != state {
             continue;
         }
         rows.push(record);
