@@ -7,9 +7,9 @@ extern crate serde_json;
 extern crate toml;
 
 use clap::{App, Arg};
-use dividebatur::configuration::{read_config, CountTask, CountGroup};
+use dividebatur::configuration::{read_config, CountGroup, CountTask};
 use dividebatur::engine::*;
-use dividebatur::output::{CountOutput, write_summary};
+use dividebatur::output::{write_summary, CountOutput};
 use rayon::prelude::*;
 use std::collections::VecDeque;
 
@@ -73,7 +73,8 @@ fn main() {
     let work = read_config(matches.values_of("INPUT").unwrap().collect());
     write_summary(&work);
     for group in work.groups {
-        let _x: Vec<_> = group.counts
+        let _x: Vec<_> = group
+            .counts
             .par_iter()
             .map(|task| {
                 let r = run_task(&group, task);

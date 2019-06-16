@@ -1,8 +1,8 @@
-use std::fs::File;
-use engine::{CountEngine};
 use configuration::{CountGroup, CountTask, Work};
-use std::collections::{HashMap};
 use defs::*;
+use engine::CountEngine;
+use std::collections::HashMap;
+use std::fs::File;
 
 #[derive(Serialize)]
 struct Parameters {
@@ -30,14 +30,10 @@ struct Round {
 }
 
 #[derive(Serialize)]
-struct ElectionSummary {
-
-}
+struct ElectionSummary {}
 
 #[derive(Serialize)]
-struct ExclusionSummary {
-
-}
+struct ExclusionSummary {}
 
 #[derive(Serialize)]
 struct Summary {
@@ -71,7 +67,7 @@ impl CountOutput {
                 summary: Summary {
                     elected: Vec::new(),
                     excluded: Vec::new(),
-                }
+                },
             },
         }
     }
@@ -92,11 +88,14 @@ impl CountOutput {
         let mut p = HashMap::new();
         let mut c = HashMap::new();
         for (idx, (name, party)) in cd.names.iter().zip(cd.parties.iter()).enumerate() {
-            c.insert(idx, Candidate {
-                id: idx,
-                title: name.clone(),
-                party: party.clone(),
-            });
+            c.insert(
+                idx,
+                Candidate {
+                    id: idx,
+                    title: name.clone(),
+                    party: party.clone(),
+                },
+            );
             p.insert(party.clone(), party.clone());
         }
         self.output.candidates = Some(c);
@@ -119,7 +118,6 @@ struct CountSummary {
     state: String,
 }
 
-
 #[derive(Serialize)]
 struct OverallSummary {
     title: String,
@@ -131,12 +129,15 @@ pub fn write_summary(work: &Work) {
     // FIXME: JSON output doesn't match multiple input file paradigm
     let group = work.groups.first().unwrap();
     for (idx, count) in group.counts.iter().enumerate() {
-        counts.insert(idx, CountSummary {
-            description: count.description.clone(),
-            name: count.slug.clone(),
-            path: count.slug.clone(),
-            state: count.slug.clone()
-        });
+        counts.insert(
+            idx,
+            CountSummary {
+                description: count.description.clone(),
+                name: count.slug.clone(),
+                path: count.slug.clone(),
+                state: count.slug.clone(),
+            },
+        );
     }
     let summary = OverallSummary {
         title: group.description.clone(),

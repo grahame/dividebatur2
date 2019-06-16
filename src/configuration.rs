@@ -83,9 +83,7 @@ pub struct Work {
 }
 
 pub fn read_config(input_files: Vec<&str>) -> Work {
-    let mut work = Work {
-        groups: Vec::new()
-    };
+    let mut work = Work { groups: Vec::new() };
     for fname in input_files {
         let path = Path::new(fname);
         let dir = path.parent().unwrap().canonicalize().unwrap();
@@ -122,7 +120,8 @@ pub fn read_config(input_files: Vec<&str>) -> Work {
             house: config.house.clone(),
             format: config.format.clone(),
             description: config.description.clone(),
-            counts: counts });
+            counts: counts,
+        });
     }
     work
 }
