@@ -59,15 +59,8 @@ pub struct CountOutput {
     output: Output,
 }
 
-pub trait CountOutputWriter {
-    fn new(slug: &str) -> Self;
-    fn set_parameters(&mut self, group: &CountGroup, task: &CountTask, engine: &CountEngine);
-    fn set_candidates(&mut self, cd: &CandidateData);
-    fn close(&self);
-}
-
-impl CountOutputWriter for CountOutput {
-    fn new(slug: &str) -> CountOutput {
+impl CountOutput {
+    pub fn new(slug: &str) -> CountOutput {
         CountOutput {
             slug: slug.to_string(),
             output: Output {
@@ -83,7 +76,7 @@ impl CountOutputWriter for CountOutput {
         }
     }
 
-    fn set_parameters(&mut self, group: &CountGroup, task: &CountTask, engine: &CountEngine) {
+    pub fn set_parameters(&mut self, group: &CountGroup, task: &CountTask, engine: &CountEngine) {
         self.output.parameters = Some(Parameters {
             total_papers: engine.total_papers,
             quota: engine.quota,
@@ -95,7 +88,7 @@ impl CountOutputWriter for CountOutput {
         });
     }
 
-    fn set_candidates(&mut self, cd: &CandidateData) {
+    pub fn set_candidates(&mut self, cd: &CandidateData) {
         let mut p = HashMap::new();
         let mut c = HashMap::new();
         for (idx, (name, party)) in cd.names.iter().zip(cd.parties.iter()).enumerate() {
@@ -110,7 +103,7 @@ impl CountOutputWriter for CountOutput {
         self.output.parties = Some(p);
     }
 
-    fn close(&self) {
+    pub fn close(&self) {
         let output_file = format!("angular/data/{}.json", self.slug);
         let fd = File::create(output_file).unwrap();
         let result = serde_json::to_writer(fd, &self.output);

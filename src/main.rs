@@ -9,13 +9,13 @@ extern crate toml;
 use clap::{App, Arg};
 use dividebatur::configuration::{read_config, CountTask, CountGroup};
 use dividebatur::engine::*;
-use dividebatur::output::{CountOutput, CountOutputWriter, write_summary};
+use dividebatur::output::{CountOutput, write_summary};
 use rayon::prelude::*;
 use std::collections::VecDeque;
 
 fn run_task(group: &CountGroup, task: &CountTask) -> Result<bool, String> {
     println!("-> running task: {}", task.description);
-    let mut output: CountOutput = CountOutputWriter::new(&task.slug);
+    let mut output: CountOutput = CountOutput::new(&task.slug);
     let candidates = match dividebatur::aec::data::candidates::load(&task.candidates, &task.state) {
         Ok(rows) => rows,
         Err(error) => {
