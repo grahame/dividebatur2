@@ -14,7 +14,7 @@ use rayon::prelude::*;
 use std::collections::VecDeque;
 
 fn run_task(group: &CountGroup, task: &CountTask) -> Result<bool, String> {
-    println!("-> running task: {:?}", task);
+    println!("-> running task: {}", task.description);
     let mut output: CountOutput = CountOutputWriter::new(&task.slug);
     let candidates = match dividebatur::aec::data::candidates::load(&task.candidates, &task.state) {
         Ok(rows) => rows,
@@ -77,7 +77,7 @@ fn main() {
             .par_iter()
             .map(|task| {
                 let r = run_task(&group, task);
-                println!("{}/{:?} -> {:?}", group.description, task, r);
+                println!("{}/{} -> {:?}", group.description, task.description, r);
             })
             .collect();
     }
