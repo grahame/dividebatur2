@@ -33,6 +33,7 @@ struct Count {
 
 #[derive(Debug, Deserialize)]
 struct Config {
+    description: String,
     house: String,
     format: String,
     candidates: Candidates,
@@ -99,6 +100,7 @@ pub fn read_config(input_files: Vec<&str>) -> Work {
                     }
                 };
                 CountTask {
+                    overall_description: config.description.clone(),
                     state: slug.clone(),
                     slug: slug.clone(),
                     house: config.house.clone(),

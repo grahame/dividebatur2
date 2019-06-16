@@ -9,7 +9,7 @@ extern crate toml;
 use clap::{App, Arg};
 use dividebatur::configuration::{read_config, CountTask};
 use dividebatur::engine::*;
-use dividebatur::output::{CountOutput, CountOutputWriter};
+use dividebatur::output::{CountOutput, CountOutputWriter, write_summary};
 use rayon::prelude::*;
 use std::collections::VecDeque;
 
@@ -23,6 +23,7 @@ fn run_task(task: &CountTask) -> Result<bool, String> {
         }
     };
     let cd = dividebatur::senate2015::load_candidate_data(candidates);
+    output.set_candidates(&cd);
 
     let prefpath = &task.preferences;
     let ballot_states =
@@ -78,4 +79,5 @@ fn main() {
             println!("{:?} -> {:?}", x, r);
         })
         .collect();
+    write_summary(work);
 }
