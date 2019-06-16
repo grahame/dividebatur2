@@ -10,11 +10,12 @@ use clap::{App, Arg};
 use dividebatur::engine::*;
 use rayon::prelude::*;
 use std::collections::{VecDeque};
-use std::fs::File;
 use dividebatur::configuration::{read_config, CountTask};
+use dividebatur::output::{CountOutput, CountOutputWriter};
 
 fn run_task(task: &CountTask) -> Result<bool, String> {
     println!("-> running task: {:?}", task);
+    let output: CountOutput = CountOutputWriter::new(&task.slug);
     let candidates = match dividebatur::aec::data::candidates::load(&task.candidates, &task.state) {
         Ok(rows) => rows,
         Err(error) => {
@@ -22,10 +23,6 @@ fn run_task(task: &CountTask) -> Result<bool, String> {
         }
     };
     let cd = dividebatur::senate2015::load_candidate_data(candidates);
-
-    let output_file = format!("output/{}.json", task.slug);
-    let _fd = File::create(output_file);
-    // serde_json::to_writer(fd, cd);
 
     let prefpath = &task.preferences;
     let ballot_states =

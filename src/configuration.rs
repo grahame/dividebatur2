@@ -16,8 +16,8 @@ struct Dataset {
 
 #[derive(Debug, Deserialize)]
 struct Tie {
-    tie: Vec<u32>,
-    pick: u32,
+    tie: Vec<String>,
+    pick: String,
 }
 
 #[derive(Debug, Deserialize)]
