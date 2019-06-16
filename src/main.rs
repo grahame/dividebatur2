@@ -71,13 +71,16 @@ fn main() {
         .get_matches();
 
     let work = read_config(matches.values_of("INPUT").unwrap().collect());
-    let _x: Vec<_> = work
-        .counts
+    write_summary(&work);
+    let mut counts = Vec::new();
+    for group in work.groups {
+        counts.append(&mut group.counts.clone());
+    }
+    let _x: Vec<_> = counts
         .par_iter()
         .map(|x| {
             let r = run_task(x);
             println!("{:?} -> {:?}", x, r);
         })
         .collect();
-    write_summary(work);
 }

@@ -8,7 +8,6 @@ use defs::*;
 struct Parameters {
     name: String,
     description: String,
-    house: String,
     state: String,
     quota: u32,
     vacancies: u32,
@@ -65,7 +64,6 @@ impl CountOutputWriter for CountOutput {
             quota: engine.quota,
             vacancies: engine.vacancies,
             description: task.description.clone(),
-            house: task.house.clone(),
             name: self.slug.clone(),
             state: task.dataset.clone(),
         });
@@ -110,11 +108,23 @@ struct Summary {
 }
 
 pub fn write_summary(work: &Work) {
-    let counts = HashMap::new();
-    for (idx, count) in work.counts.iter().enumerate() {
+    let mut counts = HashMap::new();
+    // FIXME: JSON output doesn't match multiple input file paradigm
+    let group = work.groups.first().unwrap();
+    for (idx, count) in group.counts.iter().enumerate() {
+        counts.insert(idx, CountSummary {
+            description: count.description.clone(),
+            name: count.slug.clone(),
+            path: count.slug.clone(),
+            state: count.slug.clone()
+        });
     }
     let summary = Summary {
-        title: work.,
+        title: group.description.clone(),
         counts: counts,
     };
+    let output_file = format!("angular/data/count.json");
+    let fd = File::create(output_file).unwrap();
+    let result = serde_json::to_writer(fd, &summary);
+    println!("{:?}", result);
 }

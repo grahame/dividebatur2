@@ -58,10 +58,8 @@ fn config_contents(input_file: &str) -> Result<Config, String> {
     Ok(config)
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct CountTask {
-    pub format: String,
-    pub house: String,
     pub description: String,
     pub dataset: String,
     pub state: String,
@@ -71,13 +69,23 @@ pub struct CountTask {
     pub slug: String,
 }
 
-#[derive(Debug)]
-pub struct Work {
+#[derive(Debug, Clone)]
+pub struct CountGroup {
+    pub description: String,
+    pub house: String,
+    pub format: String,
     pub counts: Vec<CountTask>,
 }
 
+#[derive(Debug, Clone)]
+pub struct Work {
+    pub groups: Vec<CountGroup>,
+}
+
 pub fn read_config(input_files: Vec<&str>) -> Work {
-    let mut work = Work { counts: Vec::new() };
+    let mut work = Work {
+        groups: Vec::new()
+    };
     for fname in input_files {
         let path = Path::new(fname);
         let dir = path.parent().unwrap().canonicalize().unwrap();
@@ -89,7 +97,7 @@ pub fn read_config(input_files: Vec<&str>) -> Work {
                 continue;
             }
         };
-        let mut new = config
+        let mut counts = config
             .count
             .iter()
             .map(|(slug, count)| {
@@ -100,20 +108,21 @@ pub fn read_config(input_files: Vec<&str>) -> Work {
                     }
                 };
                 CountTask {
-                    overall_description: config.description.clone(),
                     state: slug.clone(),
                     slug: slug.clone(),
-                    house: config.house.clone(),
                     description: count.description.clone(),
                     dataset: count.dataset.clone(),
                     candidates: in_dir(&config.candidates.all).clone(),
                     preferences: in_dir(&format!("{}/data/{}", slug, dataset.preferences)),
-                    format: config.format.clone(),
                     vacancies: count.vacancies,
                 }
             })
             .collect();
-        work.counts.append(&mut new);
+        work.groups.push(CountGroup {
+            house: config.house.clone(),
+            format: config.format.clone(),
+            description: config.description.clone(),
+            counts: counts });
     }
     work
 }
