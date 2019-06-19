@@ -120,7 +120,7 @@ pub fn read_config(input_files: Vec<&str>) -> Work {
             house: config.house.clone(),
             format: config.format.clone(),
             description: config.description.clone(),
-            counts: counts,
+            counts,
         });
     }
     work

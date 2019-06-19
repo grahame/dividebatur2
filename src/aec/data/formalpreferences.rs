@@ -135,6 +135,16 @@ fn expand(
     }
 }
 
+struct BufCache {
+    atl_buf: Vec<ATLPref>,
+    btl_buf: Vec<BTLPref>,
+}
+
+impl BufCache {
+
+
+}
+
 fn process_fd(
     fd: impl std::io::Read,
     tickets: &[Vec<CandidateIndex>],

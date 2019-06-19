@@ -141,9 +141,9 @@ pub fn write_summary(work: &Work) {
     }
     let summary = OverallSummary {
         title: group.description.clone(),
-        counts: counts,
+        counts,
     };
-    let output_file = format!("angular/data/count.json");
+    let output_file = "angular/data/count.json".to_string();
     let fd = File::create(output_file).unwrap();
     let result = serde_json::to_writer(fd, &summary);
     println!("{:?}", result);

@@ -34,6 +34,7 @@ pub struct CountState {
 }
 
 #[derive(Debug)]
+/// the number of papers and votes exhausted as the result of a distribution
 struct DistributionOutcome {
     votes_exhausted: u32,
     papers_exhausted: u32,
@@ -45,6 +46,7 @@ pub struct CountEngine {
     pub total_papers: u32,
     pub quota: u32,
     candidates: CandidateData,
+    /// the `BundleTransaction`s held by each candidate
     candidate_bundle_transactions: HashMap<CandidateIndex, CandidateBundleTransactions>,
     count_states: Vec<CountState>,
     results: CountResults,
@@ -52,8 +54,8 @@ pub struct CountEngine {
     automation: VecDeque<usize>,
 }
 
-// all bundle transactions held by a candidate, in a given round of the count
 #[derive(Debug)]
+/// all bundle transactions held by a candidate in a given round of the count
 struct CandidateBundleTransactions(Vec<BundleTransaction>);
 
 impl CandidateBundleTransactions {
@@ -81,6 +83,9 @@ impl CountEngine {
         ToPrimitive::to_u32(&vr).unwrap()
     }
 
+    /// bundle ballots together based upon the currently active preference. incrementally updates
+    /// `self.candidate_bundle_transactions` with these papers, which must have been removed from
+    /// this structure if they are being distributed as the result of an exclusion or election
     fn bundle_ballot_states(
         &mut self,
         ballot_states: Vec<BallotState>,
@@ -111,6 +116,9 @@ impl CountEngine {
         }
     }
 
+    /// distribute bundle transactions as the result of an election or an exclusion.
+    /// moves the state of each bundle transaction on to the next preference, then 
+    /// calls on to `bundle_ballot_states`
     fn distribute_bundle_transactions(
         &mut self,
         bundle_transactions: Vec<BundleTransaction>,
