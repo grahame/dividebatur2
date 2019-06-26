@@ -35,118 +35,136 @@ type ATLPref = (GroupPreference, GroupIndex);
 type BTLPref = (CandidatePreference, CandidateIndex);
 type ResolvedPrefs = Vec<CandidateIndex>;
 
-// note: this function could be a lot neater, or just use the csv library, but
-// it's performance critical and so is hand optimised. we can assume that we're
-// plain ASCII, that the field values are either empty or are a smallish integer
-fn parse_line(prefs: &str, atl_buf: &mut Vec<ATLPref>, btl_buf: &mut Vec<BTLPref>, tickets: usize) {
-    let mut field = 0;
-    let mut from = 0;
 
-    let mut it = prefs.bytes();
-    let mut upto: usize = 0;
-    loop {
-        let n = it.next();
-        let mut eol = false;
-        let term = match n {
-            Some(c) => c == b',',
-            None => {
-                eol = true;
-                true
+struct PrefParser {
+    ticket_forms: Vec<Vec<CandidateIndex>>,
+    tickets: usize,
+    atl: Vec<ATLPref>,
+    btl: Vec<BTLPref>,
+}
+
+impl PrefParser {
+    fn new(tickets: &[Vec<CandidateIndex>], candidates: usize) -> PrefParser {
+        PrefParser {
+            ticket_forms: tickets.to_vec(),
+            tickets: tickets.len(),
+            atl: Vec::with_capacity(tickets.len()),
+            btl: Vec::with_capacity(candidates),
+        }
+    }
+
+    fn clear(self: &mut Self) {
+        self.atl.clear();
+        self.btl.clear();
+    }
+
+    fn sort(self: &mut Self) {
+        self.atl.sort();
+        self.btl.sort();
+    }
+
+    fn parse(self: &mut Self, pref: &str, mut form_buf: &mut ResolvedPrefs) {
+        self.clear();
+        self.parse_line(pref);
+        self.sort();
+        self.expand(&mut form_buf);
+    }
+
+    // note: this function could be a lot neater, or just use the csv library, but
+    // it's performance critical and so is hand optimised. we can assume that we're
+    // plain ASCII, that the field values are either empty or are a smallish integer
+    fn parse_line(self: &mut Self, prefs: &str) {
+        let mut field = 0;
+        let mut from = 0;
+
+        let mut it = prefs.bytes();
+        let mut upto: usize = 0;
+        loop {
+            let n = it.next();
+            let mut eol = false;
+            let term = match n {
+                Some(c) => c == b',',
+                None => {
+                    eol = true;
+                    true
+                }
+            };
+            if term {
+                if upto - from > 0 {
+                    let pref = pref_to_u8(&prefs[from..upto]);
+                    if field < self.tickets {
+                        self.atl.push((GroupPreference(pref), GroupIndex(field as u8)));
+                    } else {
+                        self.btl.push((
+                            CandidatePreference(pref),
+                            CandidateIndex((field - self.tickets) as u8),
+                        ));
+                    }
+                }
+                field += 1;
+                from = upto + 1;
             }
-        };
-        if term {
-            if upto - from > 0 {
-                let pref = pref_to_u8(&prefs[from..upto]);
-                if field < tickets {
-                    atl_buf.push((GroupPreference(pref), GroupIndex(field as u8)));
-                } else {
-                    btl_buf.push((
-                        CandidatePreference(pref),
-                        CandidateIndex((field - tickets) as u8),
-                    ));
+            if eol {
+                break;
+            }
+            upto += 1;
+        }
+    }
+
+    fn expand_btl(self: &Self, form_buf: &mut ResolvedPrefs) {
+        let left = self.btl.iter();
+        let right = self.btl.iter().map(Some).skip(1).chain(iter::once(None));
+        let combo = left.zip(right).enumerate();
+
+        // Validate below-the-line preferences. If these are valid, they take
+        // precedence over any above-the-line preferences.
+        for (idx, (pref, next_pref)) in combo {
+            if pref.0 != CandidatePreference((idx + 1) as u8) {
+                break;
+            }
+            // look ahead: we can't have double preferences
+            if let Some(&next) = next_pref {
+                if pref.0 == next.0 {
+                    break;
                 }
             }
-            field += 1;
-            from = upto + 1;
+            form_buf.push(pref.1);
         }
-        if eol {
-            break;
-        }
-        upto += 1;
     }
 
-    atl_buf.sort();
-    btl_buf.sort();
-}
+    fn expand_atl(self: &Self, form_buf: &mut ResolvedPrefs) {
+        let left = self.atl.iter();
+        let right = self.atl.iter().map(Some).skip(1).chain(iter::once(None));
+        let combo = left.zip(right).enumerate();
 
-fn expand_btl(btl_buf: &[BTLPref], form_buf: &mut ResolvedPrefs) {
-    let left = btl_buf.iter();
-    let right = btl_buf.iter().map(Some).skip(1).chain(iter::once(None));
-    let combo = left.zip(right).enumerate();
-
-    // Validate below-the-line preferences. If these are valid, they take
-    // precedence over any above-the-line preferences.
-    for (idx, (pref, next_pref)) in combo {
-        if pref.0 != CandidatePreference((idx + 1) as u8) {
-            break;
-        }
-        // look ahead: we can't have double preferences
-        if let Some(&next) = next_pref {
-            if pref.0 == next.0 {
+        for (idx, (pref, next_pref)) in combo {
+            if pref.0 != GroupPreference((idx + 1) as u8) {
                 break;
             }
-        }
-        form_buf.push(pref.1);
-    }
-}
-
-fn expand_atl(atl_buf: &[ATLPref], form_buf: &mut ResolvedPrefs, tickets: &[Vec<CandidateIndex>]) {
-    let left = atl_buf.iter();
-    let right = atl_buf.iter().map(Some).skip(1).chain(iter::once(None));
-    let combo = left.zip(right).enumerate();
-
-    for (idx, (pref, next_pref)) in combo {
-        if pref.0 != GroupPreference((idx + 1) as u8) {
-            break;
-        }
-        // look ahead: we can't have double preferences
-        if let Some(&next) = next_pref {
-            if pref.0 == next.0 {
-                break;
+            // look ahead: we can't have double preferences
+            if let Some(&next) = next_pref {
+                if pref.0 == next.0 {
+                    break;
+                }
             }
-        }
-        form_buf.extend(&tickets[(pref.1).0 as usize]);
-    }
-}
-
-fn expand(
-    atl_buf: &[ATLPref],
-    btl_buf: &Vec<BTLPref>,
-    mut form_buf: &mut ResolvedPrefs,
-    tickets: &[Vec<CandidateIndex>],
-) {
-    // if we have at least six BTL prefrences, we have a valid form
-    expand_btl(&btl_buf, &mut form_buf);
-    if form_buf.len() < 6 {
-        // we don't have a valid BTL form, validate and expand above-the-line
-        // preferences
-        form_buf.clear();
-        expand_atl(&atl_buf, &mut form_buf, &tickets);
-    }
-}
-
-struct BufCache {
-    atl_buf: Vec<ATLPref>,
-    btl_buf: Vec<BTLPref>,
-}
-
-impl BufCache {
-    fn new(atl_size: usize, btl_size: usize) -> BufCache {
-        BufCache {
-            atl_buf: Vec::with_capacity(atl_size),
-            btl_buf: Vec::with_capacity(btl_size),
+            form_buf.extend(&self.ticket_forms[(pref.1).0 as usize]);
         }
     }
+
+    fn expand(
+        self: &Self,
+        mut form_buf: &mut ResolvedPrefs,
+    ) {
+        // if we have at least six BTL prefrences, we have a valid form
+        self.expand_btl(&mut form_buf);
+        if form_buf.len() < 6 {
+            // we don't have a valid BTL form, validate and expand above-the-line
+            // preferences
+            form_buf.clear();
+            self.expand_atl(&mut form_buf);
+        }
+    }
+
 }
 
 fn process_fd(
@@ -156,20 +174,14 @@ fn process_fd(
 ) -> Vec<BallotState> {
     let rdr = BufReader::new(fd);
     let mut form_counter: HashMap<ResolvedPrefs, u32> = HashMap::new();
-
-    let mut atl_buf: Vec<ATLPref> = Vec::with_capacity(tickets.len());
-    let mut btl_buf: Vec<BTLPref> = Vec::with_capacity(candidates);
+    let mut parser = PrefParser::new(&tickets, candidates);
 
     for r in rdr.lines().skip(2) {
-        atl_buf.clear();
-        btl_buf.clear();
-
         let line = r.unwrap();
         let pref: &str = &line[(line.find('\"').unwrap() + 1)..line.len() - 1];
-
         let mut form_buf: ResolvedPrefs = Vec::with_capacity(candidates);
-        parse_line(pref, &mut atl_buf, &mut btl_buf, tickets.len());
-        expand(&atl_buf, &btl_buf, &mut form_buf, tickets);
+
+        parser.parse(pref, &mut form_buf);
         assert!(!form_buf.is_empty());
 
         let counter = form_counter.entry(form_buf).or_insert(0);
@@ -207,12 +219,10 @@ mod tests {
         atl_expected: &Vec<ATLPref>,
         btl_expected: &Vec<BTLPref>,
     ) {
-        let mut atl_buf: Vec<ATLPref> = Vec::new();
-        let mut btl_buf: Vec<BTLPref> = Vec::new();
-
-        parse_line(&line, &mut atl_buf, &mut btl_buf, tickets);
-        assert!(*atl_expected == atl_buf);
-        assert!(*btl_expected == btl_buf);
+        let mut parser = PrefParser::new(tickets, 0);
+        parser.parse_line(&line, tickets);
+        assert!(*atl_expected == parser.atl);
+        assert!(*btl_expected == parser.btl);
     }
 
     #[test]
@@ -465,7 +475,7 @@ mod tests {
         .to_vec();
         let tickets: &Vec<Vec<CandidateIndex>> = &[].to_vec();
         let mut form_buf = Vec::new();
-        expand(&atl, &btl, &mut form_buf, &tickets);
+        expand(&PrefParser { atl, btl }, &mut form_buf, &tickets);
         assert!(
             form_buf
                 == [
@@ -486,7 +496,7 @@ mod tests {
         let tickets: &Vec<Vec<CandidateIndex>> =
             &[[CandidateIndex(0), CandidateIndex(1)].to_vec()].to_vec();
         let mut form_buf = Vec::new();
-        expand(&atl, &btl, &mut form_buf, &tickets);
+        expand(&PrefParser { atl, btl }, &mut form_buf, &tickets);
         assert!(form_buf == [CandidateIndex(0), CandidateIndex(1)]);
     }
 
@@ -505,7 +515,7 @@ mod tests {
         let tickets: &Vec<Vec<CandidateIndex>> =
             &[[CandidateIndex(0), CandidateIndex(1)].to_vec()].to_vec();
         let mut form_buf = Vec::new();
-        expand(&atl, &btl, &mut form_buf, &tickets);
+        expand(&PrefParser { atl, btl }, &mut form_buf, &tickets);
         assert!(
             form_buf
                 == [
@@ -526,7 +536,7 @@ mod tests {
         let tickets: &Vec<Vec<CandidateIndex>> =
             &[[CandidateIndex(0), CandidateIndex(1)].to_vec()].to_vec();
         let mut form_buf = Vec::new();
-        expand(&atl, &btl, &mut form_buf, &tickets);
+        expand(&PrefParser { atl, btl }, &mut form_buf, &tickets);
         assert!(form_buf == [CandidateIndex(0), CandidateIndex(1)]);
     }
 
