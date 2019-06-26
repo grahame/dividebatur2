@@ -13,7 +13,7 @@ use dividebatur::output::{write_summary, CountOutput};
 use rayon::prelude::*;
 use std::collections::VecDeque;
 
-fn run_task(group: &CountGroup, task: &CountTask) -> Result<bool, String> {
+fn run_task(group: &CountGroup, task: &CountTask, debug: bool) -> Result<bool, String> {
     println!("-> running task: {}", task.description);
     let mut output: CountOutput = CountOutput::new(&task.slug);
     let candidates = match dividebatur::aec::data::candidates::load(&task.candidates, &task.state) {
@@ -42,13 +42,17 @@ fn run_task(group: &CountGroup, task: &CountTask) -> Result<bool, String> {
         let outcome = engine.count();
         match outcome {
             CountOutcome::CountComplete(nrounds, state) => {
-                // engine.print_debug();
+                if debug {
+                    engine.print_debug();
+                }
                 println!("{:?}", state);
                 println!("Election complete after {} rounds of counting.", nrounds);
                 false
             }
             CountOutcome::CountContinues(_, _) => {
-                // engine.print_debug();
+                if debug {
+                    engine.print_debug();
+                }
                 true
             }
         }
@@ -63,6 +67,11 @@ fn main() {
         .about("single transferable vote counter")
         .author("Grahame Bowland <grahame@oreamnos.com.au>")
         .arg(
+            Arg::with_name("debug")
+                .short("d")
+                .help("Enable debugging output"),
+        )
+        .arg(
             Arg::with_name("INPUT")
                 .multiple(true)
                 .required(true)
@@ -70,6 +79,7 @@ fn main() {
         )
         .get_matches();
 
+    let debug = matches.occurrences_of("debug") > 0;
     let work = read_config(matches.values_of("INPUT").unwrap().collect());
     write_summary(&work);
     for group in work.groups {
@@ -77,7 +87,7 @@ fn main() {
             .counts
             .par_iter()
             .map(|task| {
-                let r = run_task(&group, task);
+                let r = run_task(&group, task, debug);
                 println!("{}/{} -> {:?}", group.description, task.description, r);
             })
             .collect();

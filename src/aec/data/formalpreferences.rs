@@ -140,10 +140,7 @@ struct BufCache {
     btl_buf: Vec<BTLPref>,
 }
 
-impl BufCache {
-
-
-}
+impl BufCache {}
 
 fn process_fd(
     fd: impl std::io::Read,

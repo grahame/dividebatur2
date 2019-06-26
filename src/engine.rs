@@ -117,7 +117,7 @@ impl CountEngine {
     }
 
     /// distribute bundle transactions as the result of an election or an exclusion.
-    /// moves the state of each bundle transaction on to the next preference, then 
+    /// moves the state of each bundle transaction on to the next preference, then
     /// calls on to `bundle_ballot_states`
     fn distribute_bundle_transactions(
         &mut self,
