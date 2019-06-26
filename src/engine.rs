@@ -258,10 +258,6 @@ impl CountEngine {
         if self.results.candidate_is_inactive(candidate) {
             panic!("Election of a candidate who was already excluded or elected.");
         }
-        println!(
-            "Elected candidate: {}",
-            self.candidates.vec_names(&[candidate])
-        );
         self.results.candidate_elected(candidate);
         let candidate_votes = state.votes_per_candidate[&candidate];
         let candidate_papers = state.papers_per_candidate[&candidate];
@@ -333,7 +329,7 @@ impl CountEngine {
     fn find_tie_breaker(&self, candidates: &[CandidateIndex]) -> Option<Vec<(CandidateIndex)>> {
         // look back through previous counts, looking for a round where the votes of each of the candidates
         // are distinct. if found, returns the candidates in ascending vote order
-        for (idx, count_state) in self.count_states.iter().enumerate().rev().skip(1) {
+        for count_state in self.count_states.iter().rev().skip(1) {
             let mut candidate_votes = Vec::new();
             let mut vote_set = HashSet::new();
             for candidate in candidates {
@@ -342,7 +338,6 @@ impl CountEngine {
                 vote_set.insert(votes);
             }
             if vote_set.len() == candidates.len() {
-                println!("find tie breaker: match found in round {}", idx);
                 candidate_votes.sort_by_key(|&(_, v)| v);
                 return Some(candidate_votes.drain(..).map(|(c, _)| c).collect());
             }
@@ -384,10 +379,6 @@ impl CountEngine {
                 }
             }
         };
-        println!(
-            "exclude_a_candidate: {}",
-            self.candidates.vec_names(&exclusion_candidates)
-        );
 
         self.results.candidate_excluded(to_exclude);
 
@@ -410,9 +401,6 @@ impl CountEngine {
     }
 
     pub fn count(&mut self) -> CountOutcome {
-        println!("-- START ROUND {} --", self.count_states.len() + 1);
-        println!();
-
         let votes_exhausted = 0;
         let papers_exhausted = 0;
 
@@ -421,19 +409,11 @@ impl CountEngine {
         match action {
             CountAction::FirstCount => {
                 // we don't need to do anything on the first count
-                println!("Action: first count");
             }
             CountAction::ExclusionDistribution(candidate, transfer_value) => {
-                println!(
-                    "Action: exclusion distribution of papers from candidate {} with transfer value {}",
-                    self.candidates.vec_names(&[candidate]), transfer_value);
                 self.process_exclusion_distribution(candidate, transfer_value);
             }
             CountAction::ElectionDistribution(candidate, transfer_value) => {
-                println!(
-                    "Action: election distribution of candidate {}",
-                    self.candidates.vec_names(&[candidate])
-                );
                 self.process_election_distribution(candidate, transfer_value);
             }
         }
@@ -500,7 +480,6 @@ mod tests {
     fn test_apply_transfer_value() {
         let a: Ratio<BigInt> = Ratio::from_integer(FromPrimitive::from_u32(1).unwrap())
             / Ratio::from_integer(FromPrimitive::from_u32(3).unwrap());
-        println!("{:?}", CountEngine::apply_transfer_value(&a, 1));
         assert!(CountEngine::apply_transfer_value(&a, 0) == 0);
         assert!(CountEngine::apply_transfer_value(&a, 1) == 0);
         assert!(CountEngine::apply_transfer_value(&a, 2) == 0);

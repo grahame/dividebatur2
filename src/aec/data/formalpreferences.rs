@@ -140,7 +140,14 @@ struct BufCache {
     btl_buf: Vec<BTLPref>,
 }
 
-impl BufCache {}
+impl BufCache {
+    fn new(atl_size: usize, btl_size: usize) -> BufCache {
+        BufCache {
+            atl_buf: Vec::with_capacity(atl_size),
+            btl_buf: Vec::with_capacity(btl_size),
+        }
+    }
+}
 
 fn process_fd(
     fd: impl std::io::Read,

@@ -105,8 +105,7 @@ impl CountOutput {
     pub fn close(&self) {
         let output_file = format!("angular/data/{}.json", self.slug);
         let fd = File::create(output_file).unwrap();
-        let result = serde_json::to_writer(fd, &self.output);
-        println!("{:?}", result);
+        let _result = serde_json::to_writer(fd, &self.output);
     }
 }
 
@@ -145,6 +144,5 @@ pub fn write_summary(work: &Work) {
     };
     let output_file = "angular/data/count.json".to_string();
     let fd = File::create(output_file).unwrap();
-    let result = serde_json::to_writer(fd, &summary);
-    println!("{:?}", result);
+    let _result = serde_json::to_writer(fd, &summary);
 }

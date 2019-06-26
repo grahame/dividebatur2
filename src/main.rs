@@ -14,7 +14,9 @@ use rayon::prelude::*;
 use std::collections::VecDeque;
 
 fn run_task(group: &CountGroup, task: &CountTask, debug: bool) -> Result<bool, String> {
-    println!("-> running task: {}", task.description);
+    if debug {
+        println!("-> running task: {}", task.description);
+    }
     let mut output: CountOutput = CountOutput::new(&task.slug);
     let candidates = match dividebatur::aec::data::candidates::load(&task.candidates, &task.state) {
         Ok(rows) => rows,
@@ -29,10 +31,12 @@ fn run_task(group: &CountGroup, task: &CountTask, debug: bool) -> Result<bool, S
     let ballot_states =
         dividebatur::aec::data::formalpreferences::read_file(prefpath, &cd.tickets, cd.count);
 
-    println!(
-        "{} unique bundle states at commencement of count.",
-        ballot_states.len()
-    );
+    if debug {
+        println!(
+            "{} unique bundle states at commencement of count.",
+            ballot_states.len()
+        );
+    }
 
     let mut automation = VecDeque::new();
     automation.push_back(0);
@@ -41,12 +45,11 @@ fn run_task(group: &CountGroup, task: &CountTask, debug: bool) -> Result<bool, S
     while {
         let outcome = engine.count();
         match outcome {
-            CountOutcome::CountComplete(nrounds, state) => {
+            CountOutcome::CountComplete(nrounds, _state) => {
                 if debug {
                     engine.print_debug();
+                    println!("Election complete after {} rounds of counting.", nrounds);
                 }
-                println!("{:?}", state);
-                println!("Election complete after {} rounds of counting.", nrounds);
                 false
             }
             CountOutcome::CountContinues(_, _) => {
@@ -87,8 +90,7 @@ fn main() {
             .counts
             .par_iter()
             .map(|task| {
-                let r = run_task(&group, task, debug);
-                println!("{}/{} -> {:?}", group.description, task.description, r);
+                let _result = run_task(&group, task, debug);
             })
             .collect();
     }
