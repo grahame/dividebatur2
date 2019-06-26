@@ -219,8 +219,10 @@ mod tests {
         atl_expected: &Vec<ATLPref>,
         btl_expected: &Vec<BTLPref>,
     ) {
-        let mut parser = PrefParser::new(tickets, 0);
-        parser.parse_line(&line, tickets);
+        let dummy = vec!(Vec::new(); tickets);
+        let mut parser = PrefParser::new(&dummy, 0);
+        parser.parse_line(&line);
+        parser.sort();
         assert!(*atl_expected == parser.atl);
         assert!(*btl_expected == parser.btl);
     }
@@ -303,15 +305,20 @@ mod tests {
             (GroupPreference(3), GroupIndex(2)),
         ]
         .to_vec();
-        let tickets: &Vec<Vec<CandidateIndex>> = &[
+        let ticket_forms: Vec<Vec<CandidateIndex>> = [
             [CandidateIndex(0), CandidateIndex(1)].to_vec(),
             [CandidateIndex(2)].to_vec(),
             [CandidateIndex(3), CandidateIndex(4), CandidateIndex(5)].to_vec(),
-        ]
-        .to_vec();
+        ].to_vec();
 
+        let parser = PrefParser {
+            tickets: ticket_forms.len(),
+            ticket_forms,
+            atl,
+            btl: Vec::new(),
+        };
         let mut form_buf = Vec::new();
-        expand_atl(&atl, &mut form_buf, &tickets);
+        parser.expand_atl(&mut form_buf);
         assert!(
             form_buf
                 == [
@@ -329,10 +336,16 @@ mod tests {
     #[test]
     fn expandatl_empty() {
         let atl: Vec<ATLPref> = [].to_vec();
-        let tickets: &Vec<Vec<CandidateIndex>> = &[].to_vec();
+        let ticket_forms: Vec<Vec<CandidateIndex>> = [].to_vec();
 
         let mut form_buf = Vec::new();
-        expand_atl(&atl, &mut form_buf, &tickets);
+        let parser = PrefParser {
+            tickets: ticket_forms.len(),
+            ticket_forms,
+            atl,
+            btl: Vec::new(),
+        };
+        parser.expand_atl(&mut form_buf);
         assert!(form_buf == [].to_vec());
     }
 
@@ -344,7 +357,7 @@ mod tests {
             (GroupPreference(4), GroupIndex(2)),
         ]
         .to_vec();
-        let tickets: &Vec<Vec<CandidateIndex>> = &[
+        let ticket_forms: Vec<Vec<CandidateIndex>> = [
             [CandidateIndex(0), CandidateIndex(1)].to_vec(),
             [CandidateIndex(2)].to_vec(),
             [CandidateIndex(3), CandidateIndex(4), CandidateIndex(5)].to_vec(),
@@ -352,7 +365,13 @@ mod tests {
         .to_vec();
 
         let mut form_buf = Vec::new();
-        expand_atl(&atl, &mut form_buf, &tickets);
+        let parser = PrefParser {
+            tickets: ticket_forms.len(),
+            ticket_forms,
+            atl,
+            btl: Vec::new(),
+        };
+        parser.expand_atl(&mut form_buf);
         assert!(form_buf == [CandidateIndex(2),].to_vec());
     }
 
@@ -364,7 +383,7 @@ mod tests {
             (GroupPreference(2), GroupIndex(2)),
         ]
         .to_vec();
-        let tickets: &Vec<Vec<CandidateIndex>> = &[
+        let ticket_forms: Vec<Vec<CandidateIndex>> = [
             [CandidateIndex(0), CandidateIndex(1)].to_vec(),
             [CandidateIndex(2)].to_vec(),
             [CandidateIndex(3), CandidateIndex(4), CandidateIndex(5)].to_vec(),
@@ -372,7 +391,13 @@ mod tests {
         .to_vec();
 
         let mut form_buf = Vec::new();
-        expand_atl(&atl, &mut form_buf, &tickets);
+        let parser = PrefParser {
+            tickets: ticket_forms.len(),
+            ticket_forms,
+            atl,
+            btl: Vec::new(),
+        };
+        parser.expand_atl(&mut form_buf);
         assert!(form_buf == [CandidateIndex(2),].to_vec());
     }
 
@@ -386,7 +411,13 @@ mod tests {
         .to_vec();
 
         let mut form_buf = Vec::new();
-        expand_btl(&btl, &mut form_buf);
+        let parser = PrefParser {
+            ticket_forms: Vec::new(),
+            tickets: 0,
+            atl: Vec::new(),
+            btl,
+        };
+        parser.expand_btl(&mut form_buf);
         assert!(form_buf == [CandidateIndex(1), CandidateIndex(0), CandidateIndex(2)].to_vec());
     }
 
@@ -395,7 +426,13 @@ mod tests {
         let btl: Vec<BTLPref> = [].to_vec();
 
         let mut form_buf = Vec::new();
-        expand_btl(&btl, &mut form_buf);
+        let parser = PrefParser {
+            ticket_forms: Vec::new(),
+            tickets: 0,
+            atl: Vec::new(),
+            btl,
+        };
+        parser.expand_btl(&mut form_buf);
         assert!(form_buf.is_empty());
     }
 
@@ -409,7 +446,13 @@ mod tests {
         .to_vec();
 
         let mut form_buf = Vec::new();
-        expand_btl(&btl, &mut form_buf);
+        let parser = PrefParser {
+            ticket_forms: Vec::new(),
+            tickets: 0,
+            atl: Vec::new(),
+            btl,
+        };
+        parser.expand_btl(&mut form_buf);
         assert!(form_buf == [CandidateIndex(1)]);
     }
 
@@ -425,7 +468,13 @@ mod tests {
         .to_vec();
 
         let mut form_buf = Vec::new();
-        expand_btl(&btl, &mut form_buf);
+        let parser = PrefParser {
+            ticket_forms: Vec::new(),
+            tickets: 0,
+            atl: Vec::new(),
+            btl,
+        };
+        parser.expand_btl(&mut form_buf);
         assert!(form_buf == [CandidateIndex(1), CandidateIndex(3)]);
     }
 
@@ -441,7 +490,13 @@ mod tests {
         .to_vec();
 
         let mut form_buf = Vec::new();
-        expand_btl(&btl, &mut form_buf);
+        let parser = PrefParser {
+            ticket_forms: Vec::new(),
+            tickets: 0,
+            atl: Vec::new(),
+            btl,
+        };
+        parser.expand_btl(&mut form_buf);
         assert!(form_buf == []);
     }
 
@@ -457,7 +512,13 @@ mod tests {
         .to_vec();
 
         let mut form_buf = Vec::new();
-        expand_btl(&btl, &mut form_buf);
+        let parser = PrefParser {
+            ticket_forms: Vec::new(),
+            tickets: 0,
+            atl: Vec::new(),
+            btl,
+        };
+        parser.expand_btl(&mut form_buf);
         assert!(form_buf == [CandidateIndex(1), CandidateIndex(3), CandidateIndex(0)]);
     }
 
@@ -473,9 +534,15 @@ mod tests {
             (CandidatePreference(6), CandidateIndex(5)),
         ]
         .to_vec();
-        let tickets: &Vec<Vec<CandidateIndex>> = &[].to_vec();
+        let ticket_forms: Vec<Vec<CandidateIndex>> = [].to_vec();
         let mut form_buf = Vec::new();
-        expand(&PrefParser { atl, btl }, &mut form_buf, &tickets);
+        let parser = PrefParser {
+            tickets: ticket_forms.len(),
+            ticket_forms,
+            atl,
+            btl,
+        };
+        parser.expand(&mut form_buf);
         assert!(
             form_buf
                 == [
@@ -493,10 +560,16 @@ mod tests {
     fn expand_atlonly() {
         let atl: Vec<ATLPref> = [(GroupPreference(1), GroupIndex(0))].to_vec();
         let btl: Vec<BTLPref> = [].to_vec();
-        let tickets: &Vec<Vec<CandidateIndex>> =
-            &[[CandidateIndex(0), CandidateIndex(1)].to_vec()].to_vec();
+        let ticket_forms: Vec<Vec<CandidateIndex>> =
+            [[CandidateIndex(0), CandidateIndex(1)].to_vec()].to_vec();
         let mut form_buf = Vec::new();
-        expand(&PrefParser { atl, btl }, &mut form_buf, &tickets);
+        let parser = PrefParser {
+            tickets: ticket_forms.len(),
+            ticket_forms,
+            atl,
+            btl,
+        };
+        parser.expand(&mut form_buf);
         assert!(form_buf == [CandidateIndex(0), CandidateIndex(1)]);
     }
 
@@ -512,10 +585,16 @@ mod tests {
             (CandidatePreference(6), CandidateIndex(5)),
         ]
         .to_vec();
-        let tickets: &Vec<Vec<CandidateIndex>> =
-            &[[CandidateIndex(0), CandidateIndex(1)].to_vec()].to_vec();
+        let ticket_forms: Vec<Vec<CandidateIndex>> =
+            [[CandidateIndex(0), CandidateIndex(1)].to_vec()].to_vec();
         let mut form_buf = Vec::new();
-        expand(&PrefParser { atl, btl }, &mut form_buf, &tickets);
+        let parser = PrefParser {
+            tickets: ticket_forms.len(),
+            ticket_forms,
+            atl,
+            btl,
+        };
+        parser.expand(&mut form_buf);
         assert!(
             form_buf
                 == [
@@ -533,10 +612,16 @@ mod tests {
     fn expand_atl_rescues_btl() {
         let atl: Vec<ATLPref> = [(GroupPreference(1), GroupIndex(0))].to_vec();
         let btl: Vec<BTLPref> = [(CandidatePreference(1), CandidateIndex(0))].to_vec();
-        let tickets: &Vec<Vec<CandidateIndex>> =
-            &[[CandidateIndex(0), CandidateIndex(1)].to_vec()].to_vec();
+        let ticket_forms: Vec<Vec<CandidateIndex>> =
+            [[CandidateIndex(0), CandidateIndex(1)].to_vec()].to_vec();
         let mut form_buf = Vec::new();
-        expand(&PrefParser { atl, btl }, &mut form_buf, &tickets);
+        let parser = PrefParser {
+            tickets: ticket_forms.len(),
+            ticket_forms,
+            atl,
+            btl,
+        };
+        parser.expand(&mut form_buf);
         assert!(form_buf == [CandidateIndex(0), CandidateIndex(1)]);
     }
 
