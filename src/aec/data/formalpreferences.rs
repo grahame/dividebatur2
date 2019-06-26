@@ -38,7 +38,6 @@ type ResolvedPrefs = Vec<CandidateIndex>;
 
 struct PrefParser {
     ticket_forms: Vec<Vec<CandidateIndex>>,
-    tickets: usize,
     atl: Vec<ATLPref>,
     btl: Vec<BTLPref>,
 }
@@ -47,7 +46,6 @@ impl PrefParser {
     fn new(tickets: &[Vec<CandidateIndex>], candidates: usize) -> PrefParser {
         PrefParser {
             ticket_forms: tickets.to_vec(),
-            tickets: tickets.len(),
             atl: Vec::with_capacity(tickets.len()),
             btl: Vec::with_capacity(candidates),
         }
@@ -76,6 +74,7 @@ impl PrefParser {
     fn parse_line(self: &mut Self, prefs: &str) {
         let mut field = 0;
         let mut from = 0;
+        let tickets = self.ticket_forms.len();
 
         let mut it = prefs.bytes();
         let mut upto: usize = 0;
@@ -92,12 +91,12 @@ impl PrefParser {
             if term {
                 if upto - from > 0 {
                     let pref = pref_to_u8(&prefs[from..upto]);
-                    if field < self.tickets {
+                    if field < tickets {
                         self.atl.push((GroupPreference(pref), GroupIndex(field as u8)));
                     } else {
                         self.btl.push((
                             CandidatePreference(pref),
-                            CandidateIndex((field - self.tickets) as u8),
+                            CandidateIndex((field - tickets) as u8),
                         ));
                     }
                 }
@@ -312,7 +311,6 @@ mod tests {
         ].to_vec();
 
         let parser = PrefParser {
-            tickets: ticket_forms.len(),
             ticket_forms,
             atl,
             btl: Vec::new(),
@@ -340,7 +338,6 @@ mod tests {
 
         let mut form_buf = Vec::new();
         let parser = PrefParser {
-            tickets: ticket_forms.len(),
             ticket_forms,
             atl,
             btl: Vec::new(),
@@ -366,7 +363,6 @@ mod tests {
 
         let mut form_buf = Vec::new();
         let parser = PrefParser {
-            tickets: ticket_forms.len(),
             ticket_forms,
             atl,
             btl: Vec::new(),
@@ -392,7 +388,6 @@ mod tests {
 
         let mut form_buf = Vec::new();
         let parser = PrefParser {
-            tickets: ticket_forms.len(),
             ticket_forms,
             atl,
             btl: Vec::new(),
@@ -413,7 +408,6 @@ mod tests {
         let mut form_buf = Vec::new();
         let parser = PrefParser {
             ticket_forms: Vec::new(),
-            tickets: 0,
             atl: Vec::new(),
             btl,
         };
@@ -428,7 +422,6 @@ mod tests {
         let mut form_buf = Vec::new();
         let parser = PrefParser {
             ticket_forms: Vec::new(),
-            tickets: 0,
             atl: Vec::new(),
             btl,
         };
@@ -448,7 +441,6 @@ mod tests {
         let mut form_buf = Vec::new();
         let parser = PrefParser {
             ticket_forms: Vec::new(),
-            tickets: 0,
             atl: Vec::new(),
             btl,
         };
@@ -470,7 +462,6 @@ mod tests {
         let mut form_buf = Vec::new();
         let parser = PrefParser {
             ticket_forms: Vec::new(),
-            tickets: 0,
             atl: Vec::new(),
             btl,
         };
@@ -492,7 +483,6 @@ mod tests {
         let mut form_buf = Vec::new();
         let parser = PrefParser {
             ticket_forms: Vec::new(),
-            tickets: 0,
             atl: Vec::new(),
             btl,
         };
@@ -514,7 +504,6 @@ mod tests {
         let mut form_buf = Vec::new();
         let parser = PrefParser {
             ticket_forms: Vec::new(),
-            tickets: 0,
             atl: Vec::new(),
             btl,
         };
@@ -537,7 +526,6 @@ mod tests {
         let ticket_forms: Vec<Vec<CandidateIndex>> = [].to_vec();
         let mut form_buf = Vec::new();
         let parser = PrefParser {
-            tickets: ticket_forms.len(),
             ticket_forms,
             atl,
             btl,
@@ -564,7 +552,6 @@ mod tests {
             [[CandidateIndex(0), CandidateIndex(1)].to_vec()].to_vec();
         let mut form_buf = Vec::new();
         let parser = PrefParser {
-            tickets: ticket_forms.len(),
             ticket_forms,
             atl,
             btl,
@@ -589,7 +576,6 @@ mod tests {
             [[CandidateIndex(0), CandidateIndex(1)].to_vec()].to_vec();
         let mut form_buf = Vec::new();
         let parser = PrefParser {
-            tickets: ticket_forms.len(),
             ticket_forms,
             atl,
             btl,
@@ -616,7 +602,6 @@ mod tests {
             [[CandidateIndex(0), CandidateIndex(1)].to_vec()].to_vec();
         let mut form_buf = Vec::new();
         let parser = PrefParser {
-            tickets: ticket_forms.len(),
             ticket_forms,
             atl,
             btl,
