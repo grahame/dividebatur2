@@ -213,12 +213,13 @@ impl CountEngine {
             "Candidates elected: {}",
             self.candidates.vec_names(self.results.get_elected())
         );
-        println!(
             "Candidates excluded: {}",
             self.candidates.vec_names(self.results.get_excluded())
         );
     }
 
+    /// determine the candidates elected, if any. they are returned
+    /// in order of election.
     fn determine_elected_candidates(&mut self) -> Vec<CandidateIndex> {
         // determine all candidates whose vote total is over the threshold; bin by
         // the number of votes they are holding, so we can determine any ties
@@ -244,6 +245,7 @@ impl CountEngine {
             if candidate_ids.len() == 1 {
                 elected.push(candidate_ids[0]);
             } else {
+                // FIXME
                 panic!("Election ordering ties are not yet implemented.");
             }
         }
@@ -402,8 +404,12 @@ impl CountEngine {
 
     /// count votes, once (a single count)
     pub fn count(&mut self) -> CountOutcome {
+        // FIXME: calculate these!
         let votes_exhausted = 0;
         let papers_exhausted = 0;
+
+        // FIXME: we should do the check for number of continuing candidates = number of
+        // pending vacancies here (no need to keep doing any actions if this is true.)
 
         let action = self.actions_pending.pop_front().unwrap();
         match action {
@@ -454,6 +460,7 @@ impl CountEngine {
                 let a = continuing_candidates[0];
                 let b = continuing_candidates[1];
                 if count_state.votes_per_candidate[&a] == count_state.votes_per_candidate[&b] {
+                    // FIXME
                     panic!("Must manually choose for tie on last spot.");
                 } else {
                     self.elect(b, &count_state);
