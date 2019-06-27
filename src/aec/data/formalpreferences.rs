@@ -35,7 +35,6 @@ type ATLPref = (GroupPreference, GroupIndex);
 type BTLPref = (CandidatePreference, CandidateIndex);
 type ResolvedPrefs = Vec<CandidateIndex>;
 
-
 struct PrefParser {
     ticket_forms: Vec<Vec<CandidateIndex>>,
     atl: Vec<ATLPref>,
@@ -92,7 +91,8 @@ impl PrefParser {
                 if upto - from > 0 {
                     let pref = pref_to_u8(&prefs[from..upto]);
                     if field < tickets {
-                        self.atl.push((GroupPreference(pref), GroupIndex(field as u8)));
+                        self.atl
+                            .push((GroupPreference(pref), GroupIndex(field as u8)));
                     } else {
                         self.btl.push((
                             CandidatePreference(pref),
@@ -150,10 +150,7 @@ impl PrefParser {
         }
     }
 
-    fn expand(
-        self: &Self,
-        mut form_buf: &mut ResolvedPrefs,
-    ) {
+    fn expand(self: &Self, mut form_buf: &mut ResolvedPrefs) {
         // if we have at least six BTL prefrences, we have a valid form
         self.expand_btl(&mut form_buf);
         if form_buf.len() < 6 {
@@ -163,7 +160,6 @@ impl PrefParser {
             self.expand_atl(&mut form_buf);
         }
     }
-
 }
 
 fn process_fd(
@@ -218,7 +214,7 @@ mod tests {
         atl_expected: &Vec<ATLPref>,
         btl_expected: &Vec<BTLPref>,
     ) {
-        let dummy = vec!(Vec::new(); tickets);
+        let dummy = vec![Vec::new(); tickets];
         let mut parser = PrefParser::new(&dummy, 0);
         parser.parse_line(&line);
         parser.sort();
@@ -308,7 +304,8 @@ mod tests {
             [CandidateIndex(0), CandidateIndex(1)].to_vec(),
             [CandidateIndex(2)].to_vec(),
             [CandidateIndex(3), CandidateIndex(4), CandidateIndex(5)].to_vec(),
-        ].to_vec();
+        ]
+        .to_vec();
 
         let parser = PrefParser {
             ticket_forms,

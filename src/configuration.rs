@@ -71,6 +71,7 @@ pub struct CountTask {
 
 #[derive(Debug, Clone)]
 pub struct CountGroup {
+    pub filename: String,
     pub description: String,
     pub house: String,
     pub format: String,
@@ -117,6 +118,7 @@ pub fn read_config(input_files: Vec<&str>) -> Work {
             })
             .collect();
         work.groups.push(CountGroup {
+            filename: path.file_name().unwrap().to_string_lossy().to_string(),
             house: config.house.clone(),
             format: config.format.clone(),
             description: config.description.clone(),

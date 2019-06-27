@@ -1,5 +1,6 @@
 extern crate clap;
 extern crate dividebatur;
+extern crate num_format;
 extern crate rayon;
 extern crate serde;
 extern crate serde_derive;
@@ -10,10 +11,16 @@ use clap::{App, Arg};
 use dividebatur::configuration::{read_config, CountGroup, CountTask};
 use dividebatur::engine::*;
 use dividebatur::output::{write_summary, CountOutput};
+use num_format::{Locale, ToFormattedString};
 use rayon::prelude::*;
 use std::collections::VecDeque;
+use std::time::Instant;
 
-fn run_task(group: &CountGroup, task: &CountTask, debug: bool) -> Result<bool, String> {
+struct TaskSummary {
+    total_papers: u32,
+}
+
+fn run_task(group: &CountGroup, task: &CountTask, debug: bool) -> Result<TaskSummary, String> {
     if debug {
         println!("-> running task: {}", task.description);
     }
@@ -61,7 +68,9 @@ fn run_task(group: &CountGroup, task: &CountTask, debug: bool) -> Result<bool, S
         }
     } {}
     output.close();
-    Ok(true)
+    Ok(TaskSummary {
+        total_papers: engine.total_papers,
+    })
 }
 
 fn main() {
@@ -85,13 +94,38 @@ fn main() {
     let debug = matches.occurrences_of("debug") > 0;
     let work = read_config(matches.values_of("INPUT").unwrap().collect());
     write_summary(&work);
+    let mut elapsed: Vec<(String, String, u32, u128)> = Vec::new();
     for group in work.groups {
-        let _x: Vec<_> = group
+        let mut stats: Vec<(String, String, u32, u128)> = group
             .counts
             .par_iter()
             .map(|task| {
-                let _result = run_task(&group, task, debug);
+                let start = Instant::now();
+                let result = run_task(&group, task, debug).unwrap();
+                (
+                    group.filename.clone(),
+                    task.slug.clone(),
+                    result.total_papers,
+                    start.elapsed().as_millis(),
+                )
             })
             .collect();
+        elapsed.append(&mut stats);
     }
+
+    elapsed.sort_by_key(|(_filename, _slug, _papers, time_ms)| time_ms.clone());
+    elapsed.reverse();
+    println!("|----------------------|--------------|--------------|--------------|");
+    println!("| config               | count        | papers       | elapsed (ms) |");
+    println!("|----------------------|--------------|--------------|--------------|");
+    for (filename, slug, papers, time_ms) in elapsed {
+        println!(
+            "| {:<20} | {:<12} | {:>12} | {:>12} |",
+            filename,
+            slug,
+            papers.to_formatted_string(&Locale::en),
+            time_ms.to_formatted_string(&Locale::en)
+        );
+    }
+    println!("|----------------------|--------------|--------------|--------------|");
 }
