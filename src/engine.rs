@@ -213,6 +213,7 @@ impl CountEngine {
             "Candidates elected: {}",
             self.candidates.vec_names(self.results.get_elected())
         );
+        println!(
             "Candidates excluded: {}",
             self.candidates.vec_names(self.results.get_excluded())
         );
@@ -328,7 +329,7 @@ impl CountEngine {
         self.distribute_bundle_transactions(bundles_to_distribute, transfer_value);
     }
 
-    fn find_tie_breaker(&self, candidates: &[CandidateIndex]) -> Option<Vec<(CandidateIndex)>> {
+    fn find_tie_breaker(&self, candidates: &[CandidateIndex]) -> Option<Vec<CandidateIndex>> {
         // look back through previous counts, looking for a count where the votes of each of the candidates
         // are distinct. if found, returns the candidates in ascending vote order
         for count_state in self.count_states.iter().rev().skip(1) {

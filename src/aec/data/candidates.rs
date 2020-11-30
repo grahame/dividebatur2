@@ -39,7 +39,7 @@ pub struct AECAllCandidateRow {
     contact_email: String,
 }
 
-pub fn load(filename: &str, state: &str) -> Result<Vec<AECAllCandidateRow>, Box<Error>> {
+pub fn load(filename: &str, state: &str) -> Result<Vec<AECAllCandidateRow>, Box<dyn Error>> {
     let f = File::open(filename)?;
     let mut rdr = csv::Reader::from_reader(f);
     let mut rows: Vec<AECAllCandidateRow> = Vec::new();

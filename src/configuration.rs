@@ -96,7 +96,7 @@ pub fn read_config(input_files: Vec<&str>) -> Work {
                 continue;
             }
         };
-        let mut counts = config
+        let counts = config
             .count
             .iter()
             .map(|(slug, count)| {
